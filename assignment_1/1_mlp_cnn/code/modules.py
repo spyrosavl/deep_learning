@@ -4,7 +4,6 @@ You should fill in code into indicated sections.
 """
 import numpy as np
 
-
 class LinearModule(object):
     """
     Linear module. Applies a linear transformation to the input data.
@@ -24,7 +23,6 @@ class LinearModule(object):
     
         Also, initialize gradients with zeros.
         """
-        
         ########################
         # PUT YOUR CODE HERE  #
         #######################

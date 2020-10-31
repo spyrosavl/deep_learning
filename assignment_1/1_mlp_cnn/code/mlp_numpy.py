@@ -38,7 +38,7 @@ class MLP(object):
         ########################
         # PUT YOUR CODE HERE  #
         #######################
-        raise NotImplementedError
+        #raise NotImplementedError
         ########################
         # END OF YOUR CODE    #
         #######################

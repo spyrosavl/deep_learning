@@ -16,9 +16,11 @@ import cifar10_utils
 # Default constants
 DNN_HIDDEN_UNITS_DEFAULT = '100'
 LEARNING_RATE_DEFAULT = 1e-3
-MAX_STEPS_DEFAULT = 1400
+#MAX_STEPS_DEFAULT = 1400
+MAX_STEPS_DEFAULT= 5
 BATCH_SIZE_DEFAULT = 200
-EVAL_FREQ_DEFAULT = 100
+#EVAL_FREQ_DEFAULT = 100
+EVAL_FREQ_DEFAULT = 1
 NEG_SLOPE_DEFAULT = 0.02
 
 # Directory in which cifar data is saved
@@ -44,17 +46,25 @@ def accuracy(predictions, targets):
     TODO:
     Implement accuracy computation.
     """
-    
-    ########################
-    # PUT YOUR CODE HERE  #
-    #######################
-    raise NotImplementedError
-    ########################
-    # END OF YOUR CODE    #
-    #######################
-    
-    return accuracy
+    predictions = np.vstack(predictions)
+    targets = np.vstack(targets)
+    predictions = np.argmax(predictions, 1)
+    targets = np.argmax(targets, 1)
+    total = predictions.shape[0]
+    correct = (predictions == targets).sum()
+    return correct/total
 
+def cross_entropy(predictions, targets):
+    """
+    Computes cross entropy between targets (encoded as one-hot vectors)
+    and predictions. 
+    Input: predictions (N, k) ndarray
+           targets (N, k) ndarray        
+    Returns: scalar
+    """
+    N = predictions.shape[0]
+    ce = -np.sum(targets*np.log(predictions+1e-9))/N
+    return ce
 
 def train():
     """
@@ -76,13 +86,25 @@ def train():
     else:
         dnn_hidden_units = []
     
-    ########################
-    # PUT YOUR CODE HERE  #
-    #######################
-    raise NotImplementedError
-    ########################
-    # END OF YOUR CODE    #
-    #######################
+    mlp = MLP(32*32, dnn_hidden_units, 10, NEG_SLOPE_DEFAULT)
+
+    #train
+    cifar10 = cifar10_utils.get_cifar10(DATA_DIR_DEFAULT)
+    data, targets = cifar10['train'].next_batch(FLAGS.batch_size)
+    for step in range (FLAGS.max_steps): #for epoch
+        #predictions = mlp.forward(data) #forward pass
+        loss = cross_entropy(targets, targets) #calculate loss
+        #mlp.backward(loss) #backpropagation
+        # update params params = params - learning_rate * params_grad
+        data, targets = cifar10['train'].next_batch(FLAGS.batch_size) # get data for next batch
+
+        #evaluation
+        if step > 0 and step % FLAGS.eval_freq == 0:
+            dataTest, targetsTest = cifar10['train'].next_batch(5000)
+            predictionsTest = targetsTest#mlp.forward(dataTest)
+            acc = accuracy(predictionsTest, targetsTest)
+            print("Step: %d, Accuracy: %f" % (step, acc))
+
 
 
 def print_flags():
