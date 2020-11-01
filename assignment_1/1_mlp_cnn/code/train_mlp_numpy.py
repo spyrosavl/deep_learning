@@ -53,7 +53,7 @@ def accuracy(predictions, targets):
     correct = (predictions == targets).sum()
     return correct/total
 
-def step(mlp):
+def updateParams(mlp):
     for layer in mlp.layers:
         layer.params['weight'] -= FLAGS.learning_rate * layer.grads['weight']
         layer.params['bias'] -= FLAGS.learning_rate * layer.grads['bias']
@@ -78,24 +78,27 @@ def train():
     else:
         dnn_hidden_units = []
     
-    mlp = MLP(32*32, dnn_hidden_units, 10)
+    mlp = MLP(32*32*3, dnn_hidden_units, 10)
     lossModule = CrossEntropyModule()
     #train
     cifar10 = cifar10_utils.get_cifar10(DATA_DIR_DEFAULT)
     data, targets = cifar10['train'].next_batch(FLAGS.batch_size)
     for step in range (FLAGS.max_steps):                                #for epoch
+        data = data.reshape(FLAGS.batch_size, -1)
         predictions = mlp.forward(data)                                 #forward pass
         loss = lossModule.forward(predictions, targets)                 #calculate loss
-        mlp.backward(loss)                                              #backpropagation
-        step(mlp)                                                       #update params
+        lossGrad = lossModule.backward(predictions, targets)
+        mlp.backward(lossGrad)                                          #backpropagation
+        updateParams(mlp)                                               #update params
         data, targets = cifar10['train'].next_batch(FLAGS.batch_size)   # get data for next batch
 
         #evaluation
-        # if step > 0 and step % FLAGS.eval_freq == 0:
-        #     dataTest, targetsTest = cifar10['train'].next_batch(5000)
-        #     predictionsTest = mlp.forward(dataTest)
-        #     acc = accuracy(predictionsTest, targetsTest)
-        #     print("Step: %d, Accuracy: %f" % (step, acc))
+        if step > 0 and step % FLAGS.eval_freq == 0:
+            dataTest, targetsTest = cifar10['train'].next_batch(5000)
+            dataTest = dataTest.reshape(5000, -1)
+            predictionsTest = mlp.forward(dataTest)
+            acc = accuracy(predictionsTest, targetsTest)
+            print("Step: %d, Accuracy: %f" % (step, acc))
 
 
 

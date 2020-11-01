@@ -35,18 +35,18 @@ class MLP(object):
         """
 
         self.layers = []
-        if len(n_classes) == 0:
+        if n_classes == 0:
           self.layers.append(LinearModule(n_inputs, n_classes))    # first and only layer 
         else:
           self.layers.append(LinearModule(n_inputs, n_hidden[0]))  # first layer
         
-        for index, layerInputs in enumerate(n_inputs):
-          if index == len(n_inputs) - 1: 
+        for index, layerInputs in enumerate(n_hidden):
+          if index == len(n_hidden) - 1:
             self.layers.append(LinearModule(layerInputs, n_classes))             # last layer
           else:
-            self.layers.append(LinearModule(layerInputs, layerInputs[index+1]))  # hidden layer
+            self.layers.append(LinearModule(layerInputs, n_hidden[index+1]))  # hidden layer
         
-        self.layers.append(SoftMaxModule())
+        #self.layers.append(SoftMaxModule())
 
 
 
@@ -66,8 +66,8 @@ class MLP(object):
 
         out = x
         for layer in self.layers:
-          x = layer.forward(x)
-
+          out = layer.forward(out)
+          
         return out
 
     def backward(self, dout):

@@ -41,7 +41,7 @@ class LinearModule(object):
         Hint: You can store intermediate variables inside the object. They can be used in backward pass computation.
         """
         self.x = x #to be used in backward
-        out = x @ self.params['weight'].T + self.params['bias']
+        out = x @ self.params['weight'] + self.params['bias']
         
         return out
     
@@ -58,10 +58,9 @@ class LinearModule(object):
         Implement backward pass of the module. Store gradient of the loss with respect to
         layer parameters in self.grads['weight'] and self.grads['bias'].
         """
-        
         self.grads['weight'] = self.x.T @ dout
-        self.grads['bias'] = dout
-        dx = dout @ self.params['weight']
+        self.grads['bias'] = np.average(dout, 0)
+        dx = dout @ self.params['weight'].T
         return dx
 
 
@@ -140,10 +139,7 @@ class CrossEntropyModule(object):
         TODO:
         Implement forward pass of the module.
         """
-      
-        N = x.shape[0]
-        out = -np.sum(y*np.log(x+1e-9))/N
-        
+        out = np.sum( y * np.log(x) ) / ( -x.shape[0] )
         return out
     
     def backward(self, x, y):
@@ -159,7 +155,7 @@ class CrossEntropyModule(object):
         Implement backward pass of the module.
         """
         
-        dx = - (y / x) / y.shape[0]
+        dx = (y / x) / ( -x.shape[0] )
         
         return dx
 
