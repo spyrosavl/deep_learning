@@ -27,20 +27,28 @@ class MLP(object):
                     will not have any linear layers, and the model
                     will simply perform a multinomial logistic regression.
           n_classes: number of classes of the classification problem.
-                     This number is required in order to specify the
-                     output dimensions of the MLP
+                      This number is required in order to specify the
+                      output dimensions of the MLP
 
         TODO:
         Implement initialization of the network.
         """
 
-        ########################
-        # PUT YOUR CODE HERE  #
-        #######################
-        #raise NotImplementedError
-        ########################
-        # END OF YOUR CODE    #
-        #######################
+        self.layers = []
+        if len(n_classes) == 0:
+          self.layers.append(LinearModule(n_inputs, n_classes))    # first and only layer 
+        else:
+          self.layers.append(LinearModule(n_inputs, n_hidden[0]))  # first layer
+        
+        for index, layerInputs in enumerate(n_inputs):
+          if index == len(n_inputs) - 1: 
+            self.layers.append(LinearModule(layerInputs, n_classes))             # last layer
+          else:
+            self.layers.append(LinearModule(layerInputs, layerInputs[index+1]))  # hidden layer
+        
+        self.layers.append(SoftMaxModule())
+
+
 
     def forward(self, x):
         """
@@ -56,13 +64,9 @@ class MLP(object):
         Implement forward pass of the network.
         """
 
-        ########################
-        # PUT YOUR CODE HERE  #
-        #######################
-        raise NotImplementedError
-        ########################
-        # END OF YOUR CODE    #
-        #######################
+        out = x
+        for layer in self.layers:
+          x = layer.forward(x)
 
         return out
 
@@ -77,12 +81,7 @@ class MLP(object):
         Implement backward pass of the network.
         """
 
-        ########################
-        # PUT YOUR CODE HERE  #
-        #######################
-        raise NotImplementedError
-        ########################
-        # END OF YOUR CODE    #
-        #######################
+        for i in range(len(self.layers)-1, -1, -1):
+          dout = self.layers[i].backward(dout)
 
-        return
+        return dout

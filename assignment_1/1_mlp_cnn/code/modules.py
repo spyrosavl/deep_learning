@@ -23,15 +23,8 @@ class LinearModule(object):
     
         Also, initialize gradients with zeros.
         """
-        ########################
-        # PUT YOUR CODE HERE  #
-        #######################
-
-        raise NotImplementedError
-        
-        ########################
-        # END OF YOUR CODE    #
-        #######################
+        self.params = {'weight': np.random.normal(0, 0.0001, (in_features, out_features)), 'bias' : np.zeros(out_features)}
+        self.grads = {'weight': np.zeros((in_features, out_features)), 'bias' : np.zeros(out_features)}
     
     def forward(self, x):
         """
@@ -47,16 +40,8 @@ class LinearModule(object):
     
         Hint: You can store intermediate variables inside the object. They can be used in backward pass computation.
         """
-        
-        ########################
-        # PUT YOUR CODE HERE  #
-        #######################
-
-        raise NotImplementedError
-        
-        ########################
-        # END OF YOUR CODE    #
-        #######################
+        self.x = x #to be used in backward
+        out = x @ self.params['weight'].T + self.params['bias']
         
         return out
     
@@ -74,15 +59,9 @@ class LinearModule(object):
         layer parameters in self.grads['weight'] and self.grads['bias'].
         """
         
-        ########################
-        # PUT YOUR CODE HERE  #
-        #######################
-
-        raise NotImplementedError
-        
-        ########################
-        # END OF YOUR CODE    #
-        #######################
+        self.grads['weight'] = self.x.T @ dout
+        self.grads['bias'] = dout
+        dx = dout @ self.params['weight']
         return dx
 
 
@@ -161,16 +140,9 @@ class CrossEntropyModule(object):
         TODO:
         Implement forward pass of the module.
         """
-        
-        ########################
-        # PUT YOUR CODE HERE  #
-        #######################
-
-        raise NotImplementedError
-        
-        ########################
-        # END OF YOUR CODE    #
-        #######################
+      
+        N = x.shape[0]
+        out = -np.sum(y*np.log(x+1e-9))/N
         
         return out
     
@@ -187,15 +159,7 @@ class CrossEntropyModule(object):
         Implement backward pass of the module.
         """
         
-        ########################
-        # PUT YOUR CODE HERE  #
-        #######################
-
-        raise NotImplementedError
-        
-        ########################
-        # END OF YOUR CODE    #
-        #######################
+        dx = - (y / x) / y.shape[0]
         
         return dx
 
