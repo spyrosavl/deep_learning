@@ -39,14 +39,16 @@ class MLP(object):
           self.layers.append(LinearModule(n_inputs, n_classes))    # first and only layer 
         else:
           self.layers.append(LinearModule(n_inputs, n_hidden[0]))  # first layer
+        self.layers.append(ELUModule())
         
         for index, layerInputs in enumerate(n_hidden):
           if index == len(n_hidden) - 1:
             self.layers.append(LinearModule(layerInputs, n_classes))             # last layer
           else:
             self.layers.append(LinearModule(layerInputs, n_hidden[index+1]))  # hidden layer
+          self.layers.append(ELUModule())
         
-        #self.layers.append(SoftMaxModule())
+        self.layers.append(SoftMaxModule())
 
 
 

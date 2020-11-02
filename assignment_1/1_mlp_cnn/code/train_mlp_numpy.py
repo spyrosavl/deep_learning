@@ -12,15 +12,14 @@ import os
 from mlp_numpy import MLP
 from modules import CrossEntropyModule
 import cifar10_utils
+import matplotlib.pyplot as plt
 
 # Default constants
 DNN_HIDDEN_UNITS_DEFAULT = '100'
 LEARNING_RATE_DEFAULT = 1e-3
-#MAX_STEPS_DEFAULT = 1400
-MAX_STEPS_DEFAULT= 5
+MAX_STEPS_DEFAULT = 1400
 BATCH_SIZE_DEFAULT = 200
-#EVAL_FREQ_DEFAULT = 100
-EVAL_FREQ_DEFAULT = 1
+EVAL_FREQ_DEFAULT = 100
 
 # Directory in which cifar data is saved
 DATA_DIR_DEFAULT = './cifar10/cifar-10-batches-py'
@@ -55,8 +54,9 @@ def accuracy(predictions, targets):
 
 def updateParams(mlp):
     for layer in mlp.layers:
-        layer.params['weight'] -= FLAGS.learning_rate * layer.grads['weight']
-        layer.params['bias'] -= FLAGS.learning_rate * layer.grads['bias']
+        if hasattr(layer, 'params'):
+            layer.params['weight'] -= FLAGS.learning_rate * layer.grads['weight']
+            layer.params['bias'] -= FLAGS.learning_rate * layer.grads['bias']
 
 def train():
     """
@@ -83,24 +83,35 @@ def train():
     #train
     cifar10 = cifar10_utils.get_cifar10(DATA_DIR_DEFAULT)
     data, targets = cifar10['train'].next_batch(FLAGS.batch_size)
+    loss = []
+    train_acc = []
+    test_acc = []
     for step in range (FLAGS.max_steps):                                #for epoch
         data = data.reshape(FLAGS.batch_size, -1)
         predictions = mlp.forward(data)                                 #forward pass
-        loss = lossModule.forward(predictions, targets)                 #calculate loss
+        lossTMP = lossModule.forward(predictions, targets)              #calculate loss
         lossGrad = lossModule.backward(predictions, targets)
         mlp.backward(lossGrad)                                          #backpropagation
         updateParams(mlp)                                               #update params
-        data, targets = cifar10['train'].next_batch(FLAGS.batch_size)   # get data for next batch
 
         #evaluation
         if step > 0 and step % FLAGS.eval_freq == 0:
-            dataTest, targetsTest = cifar10['train'].next_batch(5000)
+            loss.append(lossTMP)
+            train_acc.append(accuracy(predictions, targets))
+            dataTest, targetsTest = cifar10['test'].next_batch(5000)
             dataTest = dataTest.reshape(5000, -1)
             predictionsTest = mlp.forward(dataTest)
-            acc = accuracy(predictionsTest, targetsTest)
-            print("Step: %d, Accuracy: %f" % (step, acc))
+            test_acc.append(accuracy(predictionsTest, targetsTest))
+            print("Step: %d, Loss: %f, Train Accuracy: %f, Test Accuracy: %f" % (step, loss[-1], train_acc[-1], test_acc[-1]))
+        
+        data, targets = cifar10['train'].next_batch(FLAGS.batch_size)   # get data for next batch
 
-
+    plt.plot(np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), loss, label='Cross Entropy Loss')
+    plt.plot(np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), train_acc, label='Accuracy (train)')
+    plt.plot(np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), test_acc, label='Accuracy (test)')
+    plt.xlabel('training step')
+    plt.legend()
+    plt.show()
 
 def print_flags():
     """
