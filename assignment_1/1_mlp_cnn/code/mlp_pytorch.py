@@ -7,6 +7,8 @@ from __future__ import division
 from __future__ import print_function
 
 import torch.nn as nn
+import torch
+import numpy as np
 
 
 class MLP(nn.Module):
@@ -33,14 +35,23 @@ class MLP(nn.Module):
         TODO:
         Implement initialization of the network.
         """
+        super(MLP, self).__init__()
+        layers = nn.ModuleList()
+        if n_classes == 0:
+          layers.append(nn.Linear(n_inputs, n_classes))    # first and only layer
+        else:
+          layers.append(nn.Linear(n_inputs, n_hidden[0]))  # first layer
+        layers.append(nn.ELU())
+
+        for index, layerInputs in enumerate(n_hidden):
+          if index == len(n_hidden) - 1:
+            layers.append(nn.Linear(layerInputs, n_classes))             # last layer
+          else:
+            layers.append(nn.Linear(layerInputs, n_hidden[index+1]))  # hidden layer
+          layers.append(nn.ELU())
         
-        ########################
-        # PUT YOUR CODE HERE  #
-        #######################
-        raise NotImplementedError
-        ########################
-        # END OF YOUR CODE    #
-        #######################
+        layers.append(nn.Softmax(dim=1))
+        self.layers = layers
     
     def forward(self, x):
         """
@@ -56,12 +67,8 @@ class MLP(nn.Module):
         Implement forward pass of the network.
         """
         
-        ########################
-        # PUT YOUR CODE HERE  #
-        #######################
-        raise NotImplementedError
-        ########################
-        # END OF YOUR CODE    #
-        #######################
+        out = x
+        for layer in self.layers:
+          out = layer(out)
         
         return out

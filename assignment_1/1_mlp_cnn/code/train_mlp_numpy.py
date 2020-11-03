@@ -81,7 +81,7 @@ def train():
     mlp = MLP(32*32*3, dnn_hidden_units, 10)
     lossModule = CrossEntropyModule()
     #train
-    cifar10 = cifar10_utils.get_cifar10(DATA_DIR_DEFAULT)
+    cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
     data, targets = cifar10['train'].next_batch(FLAGS.batch_size)
     loss = []
     train_acc = []

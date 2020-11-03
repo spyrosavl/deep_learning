@@ -11,9 +11,11 @@ import numpy as np
 import os
 from mlp_pytorch import MLP
 import cifar10_utils
+import matplotlib.pyplot as plt
 
 import torch
 import torch.nn as nn
+import torch.optim as optim
 
 # Default constants
 DNN_HIDDEN_UNITS_DEFAULT = '100'
@@ -46,17 +48,11 @@ def accuracy(predictions, targets):
     TODO:
     Implement accuracy computation.
     """
+    predictions = predictions.argmax(1)
+    total = predictions.shape[0]
+    correct = (predictions == targets).sum()
+    return torch.true_divide(correct, total)
     
-    ########################
-    # PUT YOUR CODE HERE  #
-    #######################
-    raise NotImplementedError
-    ########################
-    # END OF YOUR CODE    #
-    #######################
-    
-    return accuracy
-
 
 def train():
     """
@@ -79,15 +75,39 @@ def train():
     else:
         dnn_hidden_units = []
     
-    neg_slope = FLAGS.neg_slope
-    
-    ########################
-    # PUT YOUR CODE HERE  #
-    #######################
-    raise NotImplementedError
-    ########################
-    # END OF YOUR CODE    #
-    #######################
+    #neg_slope = FLAGS.neg_slope
+    mlp = MLP(32*32*3, dnn_hidden_units, 10)
+    lossModule = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(mlp.parameters(), lr=FLAGS.learning_rate)
+    #train
+    cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
+    losses = []
+    train_acc = []
+    test_acc = []
+    for step in range(FLAGS.max_steps):                                #for epoch
+        data, targets = cifar10['train'].next_batch(FLAGS.batch_size)
+        data, targets = torch.from_numpy(data.reshape(FLAGS.batch_size, -1)), torch.from_numpy(targets).argmax(1)
+        optimizer.zero_grad()
+        predictions = mlp.forward(data)                                 #forward pass
+        loss = lossModule(predictions, targets)                         #calculate loss
+        loss.backward()                                                 #backpropagation
+        optimizer.step()                                                #update params
+        #evaluation
+        if step > 0 and step % FLAGS.eval_freq == 0:
+            losses.append(loss.item())
+            train_acc.append(accuracy(predictions, targets))
+            dataTest, targetsTest = cifar10['test'].next_batch(5000)
+            dataTest, targetsTest = torch.from_numpy(dataTest.reshape(5000, -1)), torch.from_numpy(targetsTest).argmax(1)
+            predictionsTest = mlp.forward(dataTest)
+            test_acc.append(accuracy(predictionsTest, targetsTest))
+            print("Step: %d, Loss: %f, Train Accuracy: %f, Test Accuracy: %f" % (step, losses[-1], train_acc[-1], test_acc[-1]))
+        
+    plt.plot(np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), losses, label='Cross Entropy Loss')
+    plt.plot(np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), train_acc, label='Accuracy (train)')
+    plt.plot(np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), test_acc, label='Accuracy (test)')
+    plt.xlabel('training step')
+    plt.legend()
+    plt.show()
 
 
 def print_flags():
