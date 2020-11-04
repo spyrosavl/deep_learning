@@ -37,20 +37,16 @@ class MLP(nn.Module):
         """
         super(MLP, self).__init__()
         layers = nn.ModuleList()
-        if n_classes == 0:
-          layers.append(nn.Linear(n_inputs, n_classes))    # first and only layer
-        else:
-          layers.append(nn.Linear(n_inputs, n_hidden[0]))  # first layer
-        layers.append(nn.ELU())
+        n_hidden.append(n_classes)
 
-        for index, layerInputs in enumerate(n_hidden):
-          if index == len(n_hidden) - 1:
-            layers.append(nn.Linear(layerInputs, n_classes))             # last layer
-          else:
-            layers.append(nn.Linear(layerInputs, n_hidden[index+1]))  # hidden layer
+        for outputs in n_hidden:
+          layers.append(nn.Linear(n_inputs, outputs))
           layers.append(nn.ELU())
+          #layers.append(nn.Tanh())
+          n_inputs = outputs
         
         layers.append(nn.Softmax(dim=1))
+        print(layers)
         self.layers = layers
     
     def forward(self, x):

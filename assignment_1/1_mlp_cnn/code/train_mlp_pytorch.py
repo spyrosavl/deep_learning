@@ -23,7 +23,6 @@ LEARNING_RATE_DEFAULT = 1e-3
 MAX_STEPS_DEFAULT = 1400
 BATCH_SIZE_DEFAULT = 200
 EVAL_FREQ_DEFAULT = 100
-NEG_SLOPE_DEFAULT = 0.02
 
 # Directory in which cifar data is saved
 DATA_DIR_DEFAULT = './cifar10/cifar-10-batches-py'
@@ -76,11 +75,13 @@ def train():
         dnn_hidden_units = []
     
     #neg_slope = FLAGS.neg_slope
-    mlp = MLP(32*32*3, dnn_hidden_units, 10)
+    cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
+    x, y, z = cifar10['train'].images.shape[1:]
+    n_classes = cifar10['train'].labels.shape[1]
+    mlp = MLP(x*y*z, dnn_hidden_units, n_classes)
     lossModule = nn.CrossEntropyLoss()
     optimizer = optim.SGD(mlp.parameters(), lr=FLAGS.learning_rate)
     #train
-    cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
     losses = []
     train_acc = []
     test_acc = []

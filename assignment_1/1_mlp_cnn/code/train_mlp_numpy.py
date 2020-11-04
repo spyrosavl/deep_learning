@@ -44,8 +44,6 @@ def accuracy(predictions, targets):
     TODO:
     Implement accuracy computation.
     """
-    predictions = np.vstack(predictions)
-    targets = np.vstack(targets)
     predictions = np.argmax(predictions, 1)
     targets = np.argmax(targets, 1)
     total = predictions.shape[0]
@@ -78,15 +76,17 @@ def train():
     else:
         dnn_hidden_units = []
     
-    mlp = MLP(32*32*3, dnn_hidden_units, 10)
+    cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
+    x, y, z = cifar10['train'].images.shape[1:]
+    n_classes = cifar10['train'].labels.shape[1]
+    mlp = MLP(x*y*z, dnn_hidden_units, n_classes)
     lossModule = CrossEntropyModule()
     #train
-    cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
-    data, targets = cifar10['train'].next_batch(FLAGS.batch_size)
     loss = []
     train_acc = []
     test_acc = []
     for step in range (FLAGS.max_steps):                                #for epoch
+        data, targets = cifar10['train'].next_batch(FLAGS.batch_size)
         data = data.reshape(FLAGS.batch_size, -1)
         predictions = mlp.forward(data)                                 #forward pass
         lossTMP = lossModule.forward(predictions, targets)              #calculate loss
@@ -104,7 +104,6 @@ def train():
             test_acc.append(accuracy(predictionsTest, targetsTest))
             print("Step: %d, Loss: %f, Train Accuracy: %f, Test Accuracy: %f" % (step, loss[-1], train_acc[-1], test_acc[-1]))
         
-        data, targets = cifar10['train'].next_batch(FLAGS.batch_size)   # get data for next batch
 
     plt.plot(np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), loss, label='Cross Entropy Loss')
     plt.plot(np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), train_acc, label='Accuracy (train)')

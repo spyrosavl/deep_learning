@@ -33,20 +33,12 @@ class MLP(object):
         TODO:
         Implement initialization of the network.
         """
-
         self.layers = []
-        if n_classes == 0:
-          self.layers.append(LinearModule(n_inputs, n_classes))    # first and only layer 
-        else:
-          self.layers.append(LinearModule(n_inputs, n_hidden[0]))  # first layer
-        self.layers.append(ELUModule())
-        
-        for index, layerInputs in enumerate(n_hidden):
-          if index == len(n_hidden) - 1:
-            self.layers.append(LinearModule(layerInputs, n_classes))             # last layer
-          else:
-            self.layers.append(LinearModule(layerInputs, n_hidden[index+1]))  # hidden layer
+        n_hidden.append(n_classes)
+        for outputs in n_hidden:
+          self.layers.append(LinearModule(n_inputs, outputs))
           self.layers.append(ELUModule())
+          n_inputs = outputs
         
         self.layers.append(SoftMaxModule())
 

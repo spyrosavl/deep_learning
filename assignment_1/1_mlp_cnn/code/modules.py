@@ -99,11 +99,10 @@ class SoftMaxModule(object):
         TODO:
         Implement backward pass of the module.
         """
-        # dx = np.zeros(dout.shape)
-        # for i in range(0, dout.shape[0]):
-        #   for j in range(0, dout.shape[1]):
-        #     dx[i,j] = np.sum(dout[i,:] * self.out[i,j] * (1 - self.out[i,:]))
-        # print(dx)
+        dx = np.zeros(dout.shape)
+        for i in range(0, dout.shape[0]):
+          for j in range(0, dout.shape[1]):
+            dx[i,j] = self.out[i,j] * (dout[i,j] - np.sum(dout[i,:]*self.out[i,:]))
         return dx
 
 
