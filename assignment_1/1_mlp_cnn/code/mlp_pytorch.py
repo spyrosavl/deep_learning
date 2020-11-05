@@ -43,6 +43,7 @@ class MLP(nn.Module):
           layers.append(nn.Linear(n_inputs, outputs))
           if i != len(n_hidden) - 1:
             layers.append(nn.ELU())
+            layers.append(nn.BatchNorm1d(outputs))
             #layers.append(nn.Tanh())
           n_inputs = outputs
         print(layers)

@@ -18,9 +18,9 @@ import torch.nn as nn
 import torch.optim as optim
 
 # Default constants
-DNN_HIDDEN_UNITS_DEFAULT = '100'
+DNN_HIDDEN_UNITS_DEFAULT = '500,300'
 LEARNING_RATE_DEFAULT = 1e-3
-MAX_STEPS_DEFAULT = 1400
+MAX_STEPS_DEFAULT = 2200
 BATCH_SIZE_DEFAULT = 200
 EVAL_FREQ_DEFAULT = 100
 
@@ -80,7 +80,8 @@ def train():
     n_classes = cifar10['train'].labels.shape[1]
     mlp = MLP(x*y*z, dnn_hidden_units, n_classes)
     lossModule = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(mlp.parameters(), lr=FLAGS.learning_rate)
+    #optimizer = optim.SGD(mlp.parameters(), lr=FLAGS.learning_rate)
+    optimizer = optim.Adam(mlp.parameters(), lr=FLAGS.learning_rate)
     #train
     losses = []
     train_acc = []

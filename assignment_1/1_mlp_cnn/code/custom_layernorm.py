@@ -35,15 +35,11 @@ class CustomLayerNormAutograd(nn.Module):
         """
         super(CustomLayerNormAutograd, self).__init__()
         
-        ########################
-        # PUT YOUR CODE HERE  #
-        #######################
+        self.n_neurons = n_neurons
+        self.eps = eps
+        self.gamma = nn.Parameter(torch.ones(n_neurons))
+        self.beta = nn.Parameter(torch.zeros(n_neurons))
         
-        raise NotImplementedError
-        
-        ########################
-        # END OF YOUR CODE    #
-        #######################
     
     def forward(self, input):
         """
@@ -60,16 +56,13 @@ class CustomLayerNormAutograd(nn.Module):
           For the case that you make use of torch.var be aware that the flag unbiased=False should be set.
         """
         
-        ########################
-        # PUT YOUR CODE HERE  #
-        #######################
-
-        raise NotImplementedError
-
-        ########################
-        # END OF YOUR CODE    #
-        #######################
-        
+        if not (input.ndim == 2 and (input.shape[1] == self.n_neurons)):
+          raise ValueError('Input is not in the right shape!')
+        input = input.T
+        mean = torch.mean(input, dim=0)
+        variance = torch.var(input, dim=0, unbiased=False)
+        out = (input - mean) / torch.sqrt(variance + self.eps)
+        out = self.gamma * out.T + self.beta
         return out
 
 
