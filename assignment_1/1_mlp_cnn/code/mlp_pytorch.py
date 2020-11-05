@@ -39,13 +39,12 @@ class MLP(nn.Module):
         layers = nn.ModuleList()
         n_hidden.append(n_classes)
 
-        for outputs in n_hidden:
+        for i, outputs in enumerate(n_hidden):
           layers.append(nn.Linear(n_inputs, outputs))
-          layers.append(nn.ELU())
-          #layers.append(nn.Tanh())
+          if i != len(n_hidden) - 1:
+            layers.append(nn.ELU())
+            #layers.append(nn.Tanh())
           n_inputs = outputs
-        
-        layers.append(nn.Softmax(dim=1))
         print(layers)
         self.layers = layers
     

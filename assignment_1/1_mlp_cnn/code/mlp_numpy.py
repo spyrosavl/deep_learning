@@ -35,9 +35,10 @@ class MLP(object):
         """
         self.layers = []
         n_hidden.append(n_classes)
-        for outputs in n_hidden:
+        for i, outputs in enumerate(n_hidden):
           self.layers.append(LinearModule(n_inputs, outputs))
-          self.layers.append(ELUModule())
+          if i != len(n_hidden) - 1:
+            self.layers.append(ELUModule())
           n_inputs = outputs
         
         self.layers.append(SoftMaxModule())

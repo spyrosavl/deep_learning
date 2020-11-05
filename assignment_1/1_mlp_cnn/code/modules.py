@@ -59,7 +59,7 @@ class LinearModule(object):
         layer parameters in self.grads['weight'] and self.grads['bias'].
         """
         self.grads['weight'] = self.x.T @ dout
-        self.grads['bias'] = dout[0,:] #np.average(dout, 0)
+        self.grads['bias'] = dout[0,:]
         dx = dout @ self.params['weight'].T
         return dx
 

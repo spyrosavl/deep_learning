@@ -98,8 +98,8 @@ def train():
         if step > 0 and step % FLAGS.eval_freq == 0:
             loss.append(lossTMP)
             train_acc.append(accuracy(predictions, targets))
-            dataTest, targetsTest = cifar10['test'].next_batch(5000)
-            dataTest = dataTest.reshape(5000, -1)
+            dataTest, targetsTest = cifar10['test'].images, cifar10['test'].labels
+            dataTest = dataTest.reshape(dataTest.shape[0], -1)
             predictionsTest = mlp.forward(dataTest)
             test_acc.append(accuracy(predictionsTest, targetsTest))
             print("Step: %d, Loss: %f, Train Accuracy: %f, Test Accuracy: %f" % (step, loss[-1], train_acc[-1], test_acc[-1]))

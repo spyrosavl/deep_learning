@@ -97,8 +97,8 @@ def train():
         if step > 0 and step % FLAGS.eval_freq == 0:
             losses.append(loss.item())
             train_acc.append(accuracy(predictions, targets))
-            dataTest, targetsTest = cifar10['test'].next_batch(5000)
-            dataTest, targetsTest = torch.from_numpy(dataTest.reshape(5000, -1)), torch.from_numpy(targetsTest).argmax(1)
+            dataTest, targetsTest = cifar10['test'].images, cifar10['test'].labels
+            dataTest, targetsTest = torch.from_numpy(dataTest.reshape(dataTest.shape[0], -1)), torch.from_numpy(targetsTest).argmax(1)
             predictionsTest = mlp.forward(dataTest)
             test_acc.append(accuracy(predictionsTest, targetsTest))
             print("Step: %d, Loss: %f, Train Accuracy: %f, Test Accuracy: %f" % (step, losses[-1], train_acc[-1], test_acc[-1]))
