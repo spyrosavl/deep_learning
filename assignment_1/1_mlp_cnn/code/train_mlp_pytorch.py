@@ -74,7 +74,6 @@ def train():
     else:
         dnn_hidden_units = []
     
-    #neg_slope = FLAGS.neg_slope
     cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
     x, y, z = cifar10['train'].images.shape[1:]
     n_classes = cifar10['train'].labels.shape[1]

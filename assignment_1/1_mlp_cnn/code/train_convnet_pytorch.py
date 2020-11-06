@@ -11,9 +11,11 @@ import numpy as np
 import os
 from convnet_pytorch import ConvNet
 import cifar10_utils
+import matplotlib.pyplot as plt
 
 import torch
 import torch.nn as nn
+import torch.optim as optim
 
 # Default constants
 LEARNING_RATE_DEFAULT = 1e-4
@@ -46,15 +48,10 @@ def accuracy(predictions, targets):
     Implement accuracy computation.
     """
     
-    ########################
-    # PUT YOUR CODE HERE  #
-    #######################
-    raise NotImplementedError
-    ########################
-    # END OF YOUR CODE    #
-    #######################
-    
-    return accuracy
+    predictions = predictions.argmax(1)
+    total = predictions.shape[0]
+    correct = (predictions == targets).sum()
+    return torch.true_divide(correct, total)
 
 
 def train():
@@ -69,14 +66,41 @@ def train():
     # Set the random seeds for reproducibility
     np.random.seed(42)
     torch.manual_seed(42)
-    
-    ########################
-    # PUT YOUR CODE HERE  #
-    #######################
-    raise NotImplementedError
-    ########################
-    # END OF YOUR CODE    #
-    #######################
+
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
+    n_classes = cifar10['train'].labels.shape[1]
+    convNet = ConvNet(3, n_classes).to(device)
+    lossModule = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(convNet.parameters(), lr=FLAGS.learning_rate)
+    #train
+    losses = []
+    train_acc = []
+    test_acc = []
+    for step in range(FLAGS.max_steps):                                #for epoch
+        data, targets = cifar10['train'].next_batch(FLAGS.batch_size)
+        data, targets = torch.from_numpy(data).to(device), torch.from_numpy(targets).argmax(1).to(device)
+        optimizer.zero_grad()
+        predictions = convNet.forward(data)                                 #forward pass
+        loss = lossModule(predictions, targets)                         #calculate loss
+        loss.backward()                                                 #backpropagation
+        optimizer.step()                                                #update params
+        #evaluation
+        if step > 0 and step % FLAGS.eval_freq == 0:
+            losses.append(loss.item())
+            train_acc.append(accuracy(predictions, targets))
+            dataTest, targetsTest = cifar10['test'].images, cifar10['test'].labels
+            dataTest, targetsTest = torch.from_numpy(dataTest).to(device), torch.from_numpy(targetsTest).argmax(1).to(device)
+            predictionsTest = convNet.forward(dataTest)
+            test_acc.append(accuracy(predictionsTest, targetsTest))
+            print("Step: %d, Loss: %f, Train Accuracy: %f, Test Accuracy: %f" % (step, losses[-1], train_acc[-1], test_acc[-1]))
+        
+    plt.plot(np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), losses, label='Cross Entropy Loss')
+    plt.plot(np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), train_acc, label='Accuracy (train)')
+    plt.plot(np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), test_acc, label='Accuracy (test)')
+    plt.xlabel('training step')
+    plt.legend()
+    plt.show()
 
 
 def print_flags():
