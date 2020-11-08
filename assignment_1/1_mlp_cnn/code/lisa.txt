@@ -1,2 +1,2 @@
 rsync -av *.py lgpu0327@lisa.surfsara.nl:~/cnn
-rsync -av lgpu0327@lisa.surfsara.nl:~/cnn/results ./results
+rsync -av lgpu0327@lisa.surfsara.nl:~/cnn/results .

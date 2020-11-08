@@ -136,12 +136,7 @@ class CustomLayerNormManualFunction(torch.autograd.Function):
         input, gamma, _ = ctx.saved_tensors
 
         if ctx.needs_input_grad[0]:
-            #print(grad_output.shape, gamma.shape)
-            grad_input = torch.zeros(grad_output.shape)
-            for i in range(grad_output.shape[0]):
-              for j in range(grad_output.shape[1]):
-                grad_input[i,j] = grad_output[i,j] * gamma[j]
-            #grad_input = grad_output * gamma.T
+            grad_input = None
         else:
             grad_input = None
         if ctx.needs_input_grad[1]:
