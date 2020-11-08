@@ -46,7 +46,6 @@ class MLP(nn.Module):
             layers.append(nn.BatchNorm1d(outputs))
             #layers.append(nn.Tanh())
           n_inputs = outputs
-        print(layers)
         self.layers = layers
     
     def forward(self, x):

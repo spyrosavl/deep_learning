@@ -105,10 +105,11 @@ def train():
             print("Step: %d, Loss: %f, Train Accuracy: %f, Test Accuracy: %f" % (step, loss[-1], train_acc[-1], test_acc[-1]))
         
 
-    plt.plot(np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), loss, label='Cross Entropy Loss')
-    plt.plot(np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), train_acc, label='Accuracy (train)')
-    plt.plot(np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), test_acc, label='Accuracy (test)')
+    plt.plot(FLAGS.eval_freq*np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), loss, label='Cross Entropy Loss')
+    plt.plot(FLAGS.eval_freq*np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), train_acc, label='Accuracy (train)')
+    plt.plot(FLAGS.eval_freq*np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), test_acc, label='Accuracy (test)')
     plt.xlabel('training step')
+    plt.grid()
     plt.legend()
     plt.show()
 

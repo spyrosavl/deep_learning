@@ -18,9 +18,9 @@ import torch.nn as nn
 import torch.optim as optim
 
 # Default constants
-DNN_HIDDEN_UNITS_DEFAULT = '500,300'
+DNN_HIDDEN_UNITS_DEFAULT = '500,300,100'
 LEARNING_RATE_DEFAULT = 1e-3
-MAX_STEPS_DEFAULT = 2200
+MAX_STEPS_DEFAULT = 3000
 BATCH_SIZE_DEFAULT = 200
 EVAL_FREQ_DEFAULT = 100
 
@@ -103,10 +103,11 @@ def train():
             test_acc.append(accuracy(predictionsTest, targetsTest))
             print("Step: %d, Loss: %f, Train Accuracy: %f, Test Accuracy: %f" % (step, losses[-1], train_acc[-1], test_acc[-1]))
         
-    plt.plot(np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), losses, label='Cross Entropy Loss')
-    plt.plot(np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), train_acc, label='Accuracy (train)')
-    plt.plot(np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), test_acc, label='Accuracy (test)')
+    plt.plot(FLAGS.eval_freq*np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), losses, label='Cross Entropy Loss')
+    plt.plot(FLAGS.eval_freq*np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), train_acc, label='Accuracy (train)')
+    plt.plot(FLAGS.eval_freq*np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), test_acc, label='Accuracy (test)')
     plt.xlabel('training step')
+    plt.grid()
     plt.legend()
     plt.show()
 

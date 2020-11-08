@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torchvision.models as models
 
 # Default constants
 LEARNING_RATE_DEFAULT = 1e-4
@@ -23,6 +24,7 @@ BATCH_SIZE_DEFAULT = 32
 MAX_STEPS_DEFAULT = 5000
 EVAL_FREQ_DEFAULT = 500
 OPTIMIZER_DEFAULT = 'ADAM'
+USE_PRETRAINED_VGG = False
 
 # Directory in which cifar data is saved
 DATA_DIR_DEFAULT = './cifar10/cifar-10-batches-py'
@@ -70,7 +72,11 @@ def train():
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     cifar10 = cifar10_utils.get_cifar10(FLAGS.data_dir)
     n_classes = cifar10['train'].labels.shape[1]
-    convNet = ConvNet(3, n_classes).to(device)
+    if USE_PRETRAINED_VGG:
+        convNet = models.vgg13(pretrained=True, progress=True).to(device)
+        convNet.classifier[-1] = nn.Linear(4096,n_classes).to(device)
+    else:
+        convNet = ConvNet(3, n_classes).to(device)
     lossModule = nn.CrossEntropyLoss()
     optimizer = optim.Adam(convNet.parameters(), lr=FLAGS.learning_rate)
     #train
@@ -81,7 +87,7 @@ def train():
         data, targets = cifar10['train'].next_batch(FLAGS.batch_size)
         data, targets = torch.from_numpy(data).to(device), torch.from_numpy(targets).argmax(1).to(device)
         optimizer.zero_grad()
-        predictions = convNet.forward(data)                                 #forward pass
+        predictions = convNet.forward(data)                             #forward pass
         loss = lossModule(predictions, targets)                         #calculate loss
         loss.backward()                                                 #backpropagation
         optimizer.step()                                                #update params
@@ -89,18 +95,24 @@ def train():
         if step > 0 and step % FLAGS.eval_freq == 0:
             losses.append(loss.item())
             train_acc.append(accuracy(predictions, targets))
-            dataTest, targetsTest = cifar10['test'].images, cifar10['test'].labels
-            dataTest, targetsTest = torch.from_numpy(dataTest).to(device), torch.from_numpy(targetsTest).argmax(1).to(device)
-            predictionsTest = convNet.forward(dataTest)
-            test_acc.append(accuracy(predictionsTest, targetsTest))
+            test_batc_size, no_of_test_images = 200, 10000
+            test_acc_tmp = []
+            for i in range(int(no_of_test_images/test_batc_size)+1):
+                dataTest, targetsTest = cifar10['test'].next_batch(test_batc_size)
+                dataTest, targetsTest = torch.from_numpy(dataTest).to(device), torch.from_numpy(targetsTest).argmax(1).to(device)
+                predictionsTest = convNet.forward(dataTest)
+                test_acc_tmp.append(accuracy(predictionsTest, targetsTest))
+            test_acc.append(sum(test_acc_tmp)/len(test_acc_tmp))
             print("Step: %d, Loss: %f, Train Accuracy: %f, Test Accuracy: %f" % (step, losses[-1], train_acc[-1], test_acc[-1]))
         
-    plt.plot(np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), losses, label='Cross Entropy Loss')
-    plt.plot(np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), train_acc, label='Accuracy (train)')
-    plt.plot(np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), test_acc, label='Accuracy (test)')
+    plt.plot(FLAGS.eval_freq*np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), losses, label='Cross Entropy Loss')
+    plt.plot(FLAGS.eval_freq*np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), train_acc, label='Accuracy (train)')
+    plt.plot(FLAGS.eval_freq*np.arange(FLAGS.max_steps/FLAGS.eval_freq-1), test_acc, label='Accuracy (test)')
     plt.xlabel('training step')
+    plt.grid()
     plt.legend()
-    plt.show()
+    plt.savefig('results/cnn_loss_curve.png', bbox_inches='tight')
+    #plt.show()
 
 
 def print_flags():

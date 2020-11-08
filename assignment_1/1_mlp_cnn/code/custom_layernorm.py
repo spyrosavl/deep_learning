@@ -108,16 +108,12 @@ class CustomLayerNormManualFunction(torch.autograd.Function):
           For the case that you make use of torch.var be aware that the flag unbiased=False should be set.
         """
         
-        ########################
-        # PUT YOUR CODE HERE  #
-        #######################
-        
-        raise NotImplementedError
-
-        ########################
-        # END OF YOUR CODE    #
-        #######################
-        
+        input = input.T
+        mean = torch.mean(input, dim=0)
+        variance = torch.var(input, dim=0, unbiased=False)
+        inputNormalized = (input - mean) / torch.sqrt(variance + eps)
+        out = gamma * inputNormalized.T + beta
+        ctx.save_for_backward(inputNormalized, gamma, beta)
         return out
     
     @staticmethod
@@ -137,16 +133,26 @@ class CustomLayerNormManualFunction(torch.autograd.Function):
           inputs to None. This should be decided dynamically.
         """
         
-        ########################
-        # PUT YOUR CODE HERE  #
-        #######################
+        input, gamma, _ = ctx.saved_tensors
 
-        raise NotImplementedError
-        
-        ########################
-        # END OF YOUR CODE    #
-        #######################
-        
+        if ctx.needs_input_grad[0]:
+            #print(grad_output.shape, gamma.shape)
+            grad_input = torch.zeros(grad_output.shape)
+            for i in range(grad_output.shape[0]):
+              for j in range(grad_output.shape[1]):
+                grad_input[i,j] = grad_output[i,j] * gamma[j]
+            #grad_input = grad_output * gamma.T
+        else:
+            grad_input = None
+        if ctx.needs_input_grad[1]:
+            grad_gamma = (grad_output * input.T).sum(0)
+        else:
+            grad_gamma = None
+        if ctx.needs_input_grad[2]:
+            grad_beta = grad_output.sum(0)
+        else:
+            grad_beta = None
+
         # return gradients of the three tensor inputs and None for the constant eps
         return grad_input, grad_gamma, grad_beta, None
 
@@ -176,15 +182,9 @@ class CustomLayerNormManualModule(nn.Module):
         """
         super(CustomLayerNormManualModule, self).__init__()
         
-        ########################
-        # PUT YOUR CODE HERE  #
-        #######################
-
-        raise NotImplementedError
-        
-        ########################
-        # END OF YOUR CODE    #
-        #######################
+        self.gamma = nn.Parameter(torch.ones(n_neurons))
+        self.beta = nn.Parameter(torch.zeros(n_neurons))
+        self.eps = eps
     
     def forward(self, input):
         """
@@ -201,15 +201,9 @@ class CustomLayerNormManualModule(nn.Module):
           Call it via its .apply() method.
         """
         
-        ########################
-        # PUT YOUR CODE HERE  #
-        #######################
-
-        raise NotImplementedError
-        
-        ########################
-        # END OF YOUR CODE    #
-        #######################
+        if not (input.ndim == 2):
+          raise ValueError('Input is not in the right shape!')
+        out = CustomLayerNormManualFunction.apply(input, self.gamma, self.beta, self.eps)
         
         return out
 
