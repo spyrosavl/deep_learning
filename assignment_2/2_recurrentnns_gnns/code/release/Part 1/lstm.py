@@ -19,14 +19,23 @@ class LSTM(nn.Module):
         self.embeds = nn.Embedding(input_dim, input_dim)
         #weight matrix
         self.W_gx = nn.Parameter(torch.randn(hidden_dim, input_dim))
+        nn.init.kaiming_normal_(self.W_gx)
         self.W_gh = nn.Parameter(torch.randn(hidden_dim, hidden_dim))
+        nn.init.kaiming_normal_(self.W_gh)
         self.W_ix = nn.Parameter(torch.randn(hidden_dim, input_dim))
+        nn.init.kaiming_normal_(self.W_ix)
         self.W_ih = nn.Parameter(torch.randn(hidden_dim, hidden_dim))
+        nn.init.kaiming_normal_(self.W_ih)
         self.W_fx = nn.Parameter(torch.randn(hidden_dim, input_dim))
+        nn.init.kaiming_normal_(self.W_fx)
         self.W_fh = nn.Parameter(torch.randn(hidden_dim, hidden_dim))
+        nn.init.kaiming_normal_(self.W_fh)
         self.W_ox = nn.Parameter(torch.randn(hidden_dim, input_dim))
+        nn.init.kaiming_normal_(self.W_ox)
         self.W_oh = nn.Parameter(torch.randn(hidden_dim, hidden_dim))
+        nn.init.kaiming_normal_(self.W_oh)
         self.W_ph = nn.Parameter(torch.randn(num_classes, hidden_dim))
+        nn.init.kaiming_normal_(self.W_ph)
         
         #bias matrix
         self.b_g = nn.Parameter(torch.zeros(hidden_dim, 1))
@@ -39,20 +48,18 @@ class LSTM(nn.Module):
         self.tanh = nn.Tanh()
         self.sigmoid = nn.Sigmoid()
 
-        # initial hidden state
-        self.h_init = nn.Parameter(torch.zeros(hidden_dim, batch_size))
-        self.c_init = nn.Parameter(torch.zeros(hidden_dim, batch_size))
-
-        self.seq_length = seq_length
+        self.hidden_dim = hidden_dim
+        self.batch_size = batch_size
         self.log_softmax = nn.LogSoftmax(dim=0)
         self.to(device)
 
     def forward(self, x):
-        h_t = self.h_init
-        c_t = self.c_init
+        h_t = torch.zeros(self.hidden_dim, self.batch_size)
+        c_t = torch.zeros(self.hidden_dim, self.batch_size)
         x = x.squeeze()
-        for i in range(self.seq_length):
-            xi = self.embeds(x[:,i].to(torch.int64)).permute(1,0)
+        x = self.embeds(x.to(torch.int64))
+        for i in range(x.shape[1]):
+            xi = x[:,i,:].permute(1,0)
             g_t = self.tanh(self.W_gx @ xi + self.W_gh @ h_t + self.b_g)
             i_t = self.sigmoid(self.W_ix @ xi + self.W_ih @ h_t + self.b_i)
             f_t = self.sigmoid(self.W_fx @ xi + self.W_fh @ h_t + self.b_f)

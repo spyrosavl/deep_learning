@@ -222,4 +222,5 @@ if __name__ == "__main__":
     # Train the model
     train(config)
 
-#python train.py --dataset bss --model_type LSTM --input_length 4 --learning_rate 0.0001 --train_steps 3000 --batch_size 256 --num_hidden 256 --device cpu
+#python train.py --dataset bss --model_type LSTM --input_length 6 --learning_rate 0.0001 --train_steps 3000 --batch_size 256 --num_hidden 256 --device cpu
+#python train.py --dataset bss --model_type LSTM --input_length 6 --learning_rate 0.001 --train_steps 3000 --batch_size 128 --num_hidden 256 --device cpu
