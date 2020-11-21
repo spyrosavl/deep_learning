@@ -21,6 +21,7 @@ from __future__ import print_function
 import argparse
 import time
 from datetime import datetime
+import copy
 
 import torch
 import torch.optim as optim
@@ -36,16 +37,16 @@ from gru import GRU
 from peep_lstm import peepLSTM
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 # You may want to look into tensorboardX for logging
 # from tensorboardX import SummaryWriter
 
 ###############################################################################
 
-
-def train(config):
-    np.random.seed(0)
-    torch.manual_seed(0)
+def train(config, seed=0):
+    np.random.seed(seed)
+    torch.manual_seed(seed)
 
 
     # Initialize the device which to run the model on
@@ -120,7 +121,7 @@ def train(config):
     # Setup the loss and optimizer
     loss_function = torch.nn.NLLLoss()
     optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
-
+    loss_list_tmp, accuracy_list_tmp = [], []
     for step, (batch_inputs, batch_targets) in enumerate(data_loader):
         # Only for time measurement of step through network
         t1 = time.time()
@@ -156,7 +157,8 @@ def train(config):
         examples_per_second = config.batch_size/float(t2-t1)
 
         if step % 60 == 0:
-
+            loss_list_tmp.append(loss.item())
+            accuracy_list_tmp.append(accuracy)
             print("[{}] Train Step {:04d}/{:04d}, Batch Size = {}, \
                    Examples/Sec = {:.2f}, "
                   "Accuracy = {:.2f}, Loss = {:.3f}".format(
@@ -170,8 +172,10 @@ def train(config):
             # If you receive a PyTorch data-loader error, check this bug report
             # https://github.com/pytorch/pytorch/pull/9655
             break
-
+        
     print('Done training.')
+    loss_list.append(loss_list_tmp)
+    accuracy_list.append(accuracy_list_tmp)
     ###########################################################################
     ###########################################################################
 
@@ -220,8 +224,21 @@ if __name__ == "__main__":
     config = parser.parse_args()
 
     # Train the model
-    train(config)
+    loss_list, accuracy_list = [], []
+    train(copy.deepcopy(config), seed=2019)
+    train(copy.deepcopy(config), seed=2020)
+    train(copy.deepcopy(config), seed=2021)
+    #plot loss & accuracy
+    loss_list, accuracy_list = np.array(loss_list), np.array(accuracy_list)
+    loss_std, accuracy_std = 3*np.std(loss_list, axis=0), 3*np.std(accuracy_list, axis=0)
+    loss_avg, accuracy_avg = np.average(loss_list, axis=0), np.average(accuracy_list, axis=0)
+    plotRange = 60*np.arange(loss_avg.shape[0])
+    plt.plot(plotRange, loss_avg, label='Loss'), plt.fill_between(plotRange, loss_avg - loss_std, loss_avg + loss_std, alpha=0.5) 
+    plt.plot(plotRange, accuracy_avg, label='Accuracy'), plt.fill_between(plotRange, accuracy_avg - accuracy_std, accuracy_avg + accuracy_std, alpha=0.5) 
+    plt.xlabel('Training Step')
+    plt.grid(),plt.legend()
+    plt.savefig("%s/%s_%s.png" % (config.summary_path,config.model_type, config.dataset), bbox_inches='tight')
+    plt.show()
 
-#python train.py --dataset bss --model_type LSTM --input_length 6 --learning_rate 0.0001 --train_steps 3000 --batch_size 256 --num_hidden 256 --device cpu
-#python train.py --dataset bss --model_type LSTM --input_length 6 --learning_rate 0.001 --train_steps 3000 --batch_size 128 --num_hidden 256 --device cpu
-#python train.py --dataset bss --model_type GRU --input_length 6 --learning_rate 0.0001 --train_steps 3000 --batch_size 256 --num_hidden 256 --device cpu
+#python train.py --dataset bss --model_type LSTM --input_length 6 --learning_rate 0.0001 --train_steps 1000 --batch_size 256 --num_hidden 256 --device cpu
+#python train.py --dataset bss --model_type GRU --input_length 6 --learning_rate 0.0001 --train_steps 1000 --batch_size 256 --num_hidden 256 --device cpu
