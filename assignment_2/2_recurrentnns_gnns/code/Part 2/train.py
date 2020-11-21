@@ -23,6 +23,7 @@ from datetime import datetime
 import argparse
 
 import numpy as np
+import math
 
 import torch
 import torch.optim as optim
@@ -32,7 +33,6 @@ from dataset import TextDataset
 from model import TextGenerationModel
 
 ###############################################################################
-
 
 def train(config):
 
@@ -44,35 +44,27 @@ def train(config):
     data_loader = DataLoader(dataset, config.batch_size)
 
     # Initialize the model that we are going to use
-    model = TextGenerationModel(config.batch_size, config.seq_length, config.vocabulary_size, config.lstm_num_hidden, config.lstm_num_layers, config.device)
+    model = TextGenerationModel(config.batch_size, config.seq_length, dataset.vocab_size, config.lstm_num_hidden, config.lstm_num_layers, config.device)
 
     # Setup the loss and optimizer
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
 
     for step, (batch_inputs, batch_targets) in enumerate(data_loader):
-
         # Only for time measurement of step through network
         t1 = time.time()
-
         # Move to GPU
-        batch_inputs = batch_inputs.to(device)     # [batch_size, seq_length,1]
-        batch_targets = batch_targets.to(device)   # [batch_size]
+        batch_inputs = torch.stack(batch_inputs).to(device)
+        batch_targets = torch.stack(batch_targets).to(device).permute(1, 0)
         # Reset for next iteration
         model.zero_grad()
-
         # Forward pass
-        log_probs = model(batch_inputs)
+        log_probs = model(batch_inputs).permute(1, 2, 0) #[batch size, classes, sequence len]
+
         # Compute the loss, gradients and update network parameters
         loss = criterion(log_probs, batch_targets)
         loss.backward()
-
-        #######################################################################
-        # Check for yourself: what happens here and why?
-        #######################################################################
-        torch.nn.utils.clip_grad_norm_(model.parameters(),
-                                       max_norm=config.max_norm)
-        #######################################################################
+        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config.max_norm)
 
         optimizer.step()
 
@@ -161,4 +153,5 @@ if __name__ == "__main__":
     # Train the model
     train(config)
 
-#python train.py --txt_file ./assets/book_EN_democracy_in_the_US.txt --train_steps 1000
+#python train.py --txt_file ./assets/book_EN_democracy_in_the_US.txt --train_steps 5000 --device cpu 
+#python train.py --txt_file ./assets/book_EN_democracy_in_the_US.txt --train_steps 5000 --device cuda 

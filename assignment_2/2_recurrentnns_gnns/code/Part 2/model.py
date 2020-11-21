@@ -18,16 +18,31 @@ from __future__ import division
 from __future__ import print_function
 
 import torch.nn as nn
-
+import torch
 
 class TextGenerationModel(nn.Module):
 
     def __init__(self, batch_size, seq_length, vocabulary_size,
                  lstm_num_hidden=256, lstm_num_layers=2, device='cuda:0'):
-
         super(TextGenerationModel, self).__init__()
-        # Initialization here...
+        self.hidden_dim, self.batch_size, self.lstm_num_layers = lstm_num_hidden, batch_size, lstm_num_layers
+        self.embeddings = nn.Embedding(num_embeddings=vocabulary_size, embedding_dim=lstm_num_hidden)
+        self.lstm = nn.LSTM(input_size=lstm_num_hidden, hidden_size=lstm_num_hidden,num_layers=lstm_num_layers)
+        self.linear = nn.Linear(lstm_num_hidden, vocabulary_size)
+        
+        nn.init.kaiming_normal_(self.linear.weight)
+        for name, param in self.lstm.named_parameters():
+            if 'bias' in name:
+                nn.init.constant_(param, 0.0)
+            elif 'weight_ih' in name:
+                nn.init.kaiming_normal_(param)
+            elif 'weight_hh' in name:
+                nn.init.orthogonal_(param)
+        
+        self.to(device)
 
     def forward(self, x):
-        # Implementation here...
-        pass
+        features = self.embeddings(x)
+        output, _ = self.lstm(features)
+        out = self.linear(output)
+        return out
