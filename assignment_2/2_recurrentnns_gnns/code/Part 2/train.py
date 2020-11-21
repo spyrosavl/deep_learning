@@ -40,27 +40,45 @@ def train(config):
     device = torch.device(config.device)
 
     # Initialize the dataset and data loader (note the +1)
-    dataset = TextDataset(...)  # fixme
+    dataset = TextDataset(config.txt_file, config.seq_length)
     data_loader = DataLoader(dataset, config.batch_size)
 
     # Initialize the model that we are going to use
-    model = TextGenerationModel(...)  # FIXME
+    model = TextGenerationModel(config.batch_size, config.seq_length, config.vocabulary_size, config.lstm_num_hidden, config.lstm_num_layers, config.device)
 
     # Setup the loss and optimizer
-    criterion = None  # FIXME
-    optimizer = None  # FIXME
+    criterion = torch.nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
 
     for step, (batch_inputs, batch_targets) in enumerate(data_loader):
 
         # Only for time measurement of step through network
         t1 = time.time()
 
-        #######################################################
-        # Add more code here ...
-        #######################################################
+        # Move to GPU
+        batch_inputs = batch_inputs.to(device)     # [batch_size, seq_length,1]
+        batch_targets = batch_targets.to(device)   # [batch_size]
+        # Reset for next iteration
+        model.zero_grad()
 
-        loss = np.inf   # fixme
-        accuracy = 0.0  # fixme
+        # Forward pass
+        log_probs = model(batch_inputs)
+        # Compute the loss, gradients and update network parameters
+        loss = criterion(log_probs, batch_targets)
+        loss.backward()
+
+        #######################################################################
+        # Check for yourself: what happens here and why?
+        #######################################################################
+        torch.nn.utils.clip_grad_norm_(model.parameters(),
+                                       max_norm=config.max_norm)
+        #######################################################################
+
+        optimizer.step()
+
+        predictions = torch.argmax(log_probs, dim=1)
+        correct = (predictions == batch_targets).sum().item()
+        accuracy = correct / log_probs.size(0)
 
         # Just for time measurement
         t2 = time.time()
@@ -142,3 +160,5 @@ if __name__ == "__main__":
 
     # Train the model
     train(config)
+
+#python train.py --txt_file ./assets/book_EN_democracy_in_the_US.txt --train_steps 1000
