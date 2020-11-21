@@ -28,21 +28,46 @@ class GRU(nn.Module):
         self._batch_size = batch_size
         self._device = device
 
-        ########################
-        # PUT YOUR CODE HERE  #
-        #######################
-        raise NotImplementedError
-        ########################
-        # END OF YOUR CODE    #
-        #######################
+        print("Seq len: %d, Input dim: %d, No of classes %d" % (seq_length, input_dim, num_classes))
+        self.embeds = nn.Embedding(input_dim, input_dim)
+        #weight matrix
+        self.W_z = nn.Parameter(torch.randn(hidden_dim, input_dim))
+        nn.init.kaiming_normal_(self.W_z)
+        self.U_z = nn.Parameter(torch.randn(hidden_dim, hidden_dim))
+        nn.init.kaiming_normal_(self.U_z)
+        self.W_r = nn.Parameter(torch.randn(hidden_dim, input_dim))
+        nn.init.kaiming_normal_(self.W_r)
+        self.U_r = nn.Parameter(torch.randn(hidden_dim, hidden_dim))
+        nn.init.kaiming_normal_(self.U_r)
+        self.W = nn.Parameter(torch.randn(hidden_dim, input_dim))
+        nn.init.kaiming_normal_(self.W)
+        self.U = nn.Parameter(torch.randn(hidden_dim, hidden_dim))
+        nn.init.kaiming_normal_(self.U)
+        self.W_ph = nn.Parameter(torch.randn(num_classes, hidden_dim))
+        nn.init.kaiming_normal_(self.W_ph)
+        
+        #bias matrix
+        self.b_p = nn.Parameter(torch.zeros(num_classes, 1))
 
+        # activation functions
+        self.tanh = nn.Tanh()
+        self.sigmoid = nn.Sigmoid()
+
+        self.log_softmax = nn.LogSoftmax(dim=0)
+        self.to(device)
 
     def forward(self, x):
+        h_t = torch.zeros(self._hidden_dim, self._batch_size)
+        x = x.squeeze()
+        x = self.embeds(x.to(torch.int64))
+        for i in range(x.shape[1]):
+            xi = x[:,i,:].permute(1,0)
+            z_t = self.sigmoid(self.W_z @ xi + self.U_z @ h_t)
+            r_t = self.sigmoid(self.W_r @ xi + self.U_r @ h_t)
+            h_hat = self.tanh(self.W @ xi + r_t * self.U @ h_t)
+            h_t = self.tanh(z_t * h_t + (1 - z_t) * h_hat)
         
-        ########################
-        # PUT YOUR CODE HERE  #
-        #######################
-        raise NotImplementedError
-        ########################
-        # END OF YOUR CODE    #
-        #######################
+        y_t = self.W_ph @ h_t + self.b_p
+        y_t = self.log_softmax(y_t)
+        y_t = y_t.permute(1,0)
+        return y_t
