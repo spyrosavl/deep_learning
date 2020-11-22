@@ -49,19 +49,20 @@ def train(config):
     # Setup the loss and optimizer
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
-
     for step, (batch_inputs, batch_targets) in enumerate(data_loader):
         # Only for time measurement of step through network
         t1 = time.time()
         # Move to GPU
         batch_inputs = torch.stack(batch_inputs).to(device)
-        batch_targets = torch.stack(batch_targets).to(device).permute(1, 0)
+        batch_targets = torch.stack(batch_targets).to(device)
         # Reset for next iteration
         model.zero_grad()
         # Forward pass
-        log_probs = model(batch_inputs).permute(1, 2, 0) #[batch size, classes, sequence len]
+        log_probs = model(batch_inputs) #[batch size, classes, sequence len]
 
         # Compute the loss, gradients and update network parameters
+        log_probs = log_probs.permute(1, 2, 0)
+        batch_targets = batch_targets.permute(1, 0)
         loss = criterion(log_probs, batch_targets)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config.max_norm)
@@ -70,7 +71,7 @@ def train(config):
 
         predictions = torch.argmax(log_probs, dim=1)
         correct = (predictions == batch_targets).sum().item()
-        accuracy = correct / log_probs.size(0)
+        accuracy = correct / (log_probs.size(0) * log_probs.size(2))
 
         # Just for time measurement
         t2 = time.time()

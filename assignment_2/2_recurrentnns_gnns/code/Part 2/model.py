@@ -25,6 +25,7 @@ class TextGenerationModel(nn.Module):
     def __init__(self, batch_size, seq_length, vocabulary_size,
                  lstm_num_hidden=256, lstm_num_layers=2, device='cuda:0'):
         super(TextGenerationModel, self).__init__()
+        self.device = device
         self.hidden_dim, self.batch_size, self.lstm_num_layers = lstm_num_hidden, batch_size, lstm_num_layers
         self.embeddings = nn.Embedding(num_embeddings=vocabulary_size, embedding_dim=lstm_num_hidden)
         self.lstm = nn.LSTM(input_size=lstm_num_hidden, hidden_size=lstm_num_hidden,num_layers=lstm_num_layers)
@@ -41,8 +42,8 @@ class TextGenerationModel(nn.Module):
         
         self.to(device)
 
-    def forward(self, x):
-        features = self.embeddings(x)
+    def forward(self, input):
+        features = self.embeddings(input)
         output, _ = self.lstm(features)
         out = self.linear(output)
         return out
