@@ -21,6 +21,7 @@ import os
 import time
 from datetime import datetime
 import argparse
+import random
 
 import numpy as np
 import math
@@ -33,6 +34,35 @@ from dataset import TextDataset
 from model import TextGenerationModel
 
 ###############################################################################
+
+def predict(config, dataset, model, text, next_chars=30):
+    model.eval()
+    hiddenState = model.init_state(len(text))
+
+    for i in range(0, next_chars):
+        x = torch.tensor([[dataset._char_to_ix[c] for c in text[i:]]])
+        y_pred, hiddenState = model(x, hiddenState)
+        print(y_pred.shape)
+        last_char = y_pred[0][-1]
+        print(last_char)
+        #p = torch.nn.functional.softmax(last_word_logits, dim=0).detach().numpy()
+        #word_index = np.random.choice(len(last_word_logits), p=p)
+        text.append(dataset._ix_to_char[word_index])
+
+    return dataset.convert_to_string(text)
+
+
+# model.eval()
+#             #initChar = dataset._char_to_ix[random.choice(dataset._chars)]
+#             initChar = dataset._char_to_ix['A']
+#             generatedSentence = torch.LongTensor([initChar]).view(-1, 1)
+#             hiddenState = (torch.zeros(config.lstm_num_layers, 1, config.lstm_num_hidden).to(config.device), torch.zeros(config.lstm_num_layers, 1, config.lstm_num_hidden).to(config.device))
+#             for i in range(5):
+#                 predictions, hiddenState = model(generatedSentence, hiddenState)
+#                 print(predictions.shape)
+#                 newChar = predictions[:,0,:].argmax(dim=1)[-1]#.tolist()
+#                 generatedSentence = torch.cat((generatedSentence, newChar))
+#             break
 
 def train(config):
 
@@ -49,26 +79,29 @@ def train(config):
     # Setup the loss and optimizer
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
+    hiddenState = model.init_state(config.seq_length)
     for step, (batch_inputs, batch_targets) in enumerate(data_loader):
         # Only for time measurement of step through network
         t1 = time.time()
         # Move to GPU
-        batch_inputs = torch.stack(batch_inputs).to(device)
+        batch_inputs = torch.stack(batch_inputs).to(device).t() #[no of chars, batch size]
         batch_targets = torch.stack(batch_targets).to(device)
+        #train model
+        model.train()
         # Reset for next iteration
         model.zero_grad()
         # Forward pass
-        log_probs = model(batch_inputs) #[batch size, classes, sequence len]
+        log_probs, hiddenState = model(batch_inputs, hiddenState) #[batch size, classes, sequence len]
+        hiddenState = (hiddenState[0].detach(), hiddenState[1].detach())
 
         # Compute the loss, gradients and update network parameters
         log_probs = log_probs.permute(1, 2, 0)
-        batch_targets = batch_targets.permute(1, 0)
+        #batch_targets = batch_targets.permute(1, 0)
         loss = criterion(log_probs, batch_targets)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config.max_norm)
 
         optimizer.step()
-
         predictions = torch.argmax(log_probs, dim=1)
         correct = (predictions == batch_targets).sum().item()
         accuracy = correct / (log_probs.size(0) * log_probs.size(2))
@@ -88,13 +121,10 @@ def train(config):
                     ))
 
         if (step + 1) % config.sample_every == 0:
-            # Generate some sentences by sampling from the model
             pass
+            #predict(config, dataset, model, 'A', 30)
 
         if step == config.train_steps:
-            # If you receive a PyTorch data-loader error,
-            # check this bug report:
-            # https://github.com/pytorch/pytorch/pull/9655
             break
 
     print('Done training.')

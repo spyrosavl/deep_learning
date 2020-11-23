@@ -21,7 +21,6 @@ import os
 import numpy as np
 import torch.utils.data as data
 
-
 class TextDataset(data.Dataset):
 
     def __init__(self, filename, seq_length):
