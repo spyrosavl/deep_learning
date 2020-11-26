@@ -28,7 +28,7 @@ class TextGenerationModel(nn.Module):
         self.device = device
         self.lstm_num_hidden, self.batch_size, self.lstm_num_layers = lstm_num_hidden, batch_size, lstm_num_layers
         self.embeddings = nn.Embedding(num_embeddings=vocabulary_size, embedding_dim=lstm_num_hidden)
-        self.lstm = nn.LSTM(input_size=lstm_num_hidden, hidden_size=lstm_num_hidden,num_layers=lstm_num_layers)
+        self.lstm = nn.LSTM(input_size=lstm_num_hidden, hidden_size=lstm_num_hidden,num_layers=lstm_num_layers, batch_first=True)
         self.linear = nn.Linear(lstm_num_hidden, vocabulary_size)
         
         nn.init.kaiming_normal_(self.linear.weight)

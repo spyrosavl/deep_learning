@@ -35,21 +35,37 @@ from model import TextGenerationModel
 
 ###############################################################################
 
+# def predict(config, dataset, model, text, next_chars=30):
+#     model.eval()
+#     hiddenState = model.init_state(len(text))
+
+#     for i in range(0, next_chars):
+#         x = torch.tensor([[dataset._char_to_ix[c] for c in text[i:]]])
+#         y_pred, hiddenState = model(x, hiddenState)
+#         last_char = y_pred[0][-1]
+#         p = torch.nn.functional.softmax(last_char, dim=0).detach().numpy()
+#         word_index = np.random.choice(len(last_char), p=p)
+#         text.append(dataset._ix_to_char[word_index])
+
+#     text = [t for t in text if t != '\n']
+#     text = ''.join(text)
+#     return text
+
 def predict(config, dataset, model, text, next_chars=30):
     model.eval()
-    hiddenState = model.init_state(len(text))
+    text = list(text)
+    hiddenState = model.init_state(1)
 
     for i in range(0, next_chars):
         x = torch.tensor([[dataset._char_to_ix[c] for c in text[i:]]])
         y_pred, hiddenState = model(x, hiddenState)
-        print(y_pred.shape)
-        last_char = y_pred[0][-1]
-        print(last_char)
-        #p = torch.nn.functional.softmax(last_word_logits, dim=0).detach().numpy()
-        #word_index = np.random.choice(len(last_word_logits), p=p)
-        text.append(dataset._ix_to_char[word_index])
+        last_char = y_pred[0][-1].argmax().item()
+        text.append(dataset._ix_to_char[last_char])
 
-    return dataset.convert_to_string(text)
+    text = [t for t in text if t != '\n']
+    text = ''.join(text)
+    print(text)
+    return text
 
 
 # model.eval()
@@ -79,24 +95,23 @@ def train(config):
     # Setup the loss and optimizer
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
-    hiddenState = model.init_state(config.seq_length)
+    #hiddenState = model.init_state(config.seq_length)
     for step, (batch_inputs, batch_targets) in enumerate(data_loader):
         # Only for time measurement of step through network
         t1 = time.time()
         # Move to GPU
-        batch_inputs = torch.stack(batch_inputs).to(device).t() #[no of chars, batch size]
+        batch_inputs = torch.stack(batch_inputs).to(device).t() #[batch size, no of chars]
         batch_targets = torch.stack(batch_targets).to(device)
         #train model
         model.train()
         # Reset for next iteration
         model.zero_grad()
         # Forward pass
-        log_probs, hiddenState = model(batch_inputs, hiddenState) #[batch size, classes, sequence len]
-        hiddenState = (hiddenState[0].detach(), hiddenState[1].detach())
+        log_probs, hiddenState = model(batch_inputs)#, hiddenState) #[batch size, classes, sequence len]
+        #hiddenState = (hiddenState[0].detach(), hiddenState[1].detach())
 
         # Compute the loss, gradients and update network parameters
         log_probs = log_probs.permute(1, 2, 0)
-        #batch_targets = batch_targets.permute(1, 0)
         loss = criterion(log_probs, batch_targets)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=config.max_norm)
@@ -121,8 +136,8 @@ def train(config):
                     ))
 
         if (step + 1) % config.sample_every == 0:
-            pass
-            #predict(config, dataset, model, 'A', 30)
+            #pass
+            predict(config, dataset, model, 'America is', 50)
 
         if step == config.train_steps:
             break
