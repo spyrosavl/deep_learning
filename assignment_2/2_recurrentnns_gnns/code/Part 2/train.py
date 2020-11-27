@@ -35,25 +35,26 @@ from model import TextGenerationModel
 
 ###############################################################################
 
-# def predict(config, dataset, model, text, next_chars=30):
-#     model.eval()
-#     hiddenState = model.init_state(len(text))
-
-#     for i in range(0, next_chars):
-#         x = torch.tensor([[dataset._char_to_ix[c] for c in text[i:]]])
-#         y_pred, hiddenState = model(x, hiddenState)
-#         last_char = y_pred[0][-1]
-#         p = torch.nn.functional.softmax(last_char, dim=0).detach().numpy()
-#         word_index = np.random.choice(len(last_char), p=p)
-#         text.append(dataset._ix_to_char[word_index])
-
-#     text = [t for t in text if t != '\n']
-#     text = ''.join(text)
-#     return text
-
-def predict(config, dataset, model, text, next_chars=30):
+def predict_with_temperature(config, dataset, model, textOriginal, next_chars=30, temperature=2):
     model.eval()
-    text = list(text)
+    text = list(textOriginal)
+    hiddenState = model.init_state(1)
+
+    for i in range(0, next_chars):
+        x = torch.tensor([[dataset._char_to_ix[c] for c in text[i:]]])
+        y_pred, hiddenState = model(x, hiddenState)
+        last_char = temperature * y_pred[0][-1]
+        p = torch.nn.functional.softmax(last_char, dim=0).detach().numpy()
+        word_index = np.random.choice(len(last_char), p=p)
+        text.append(dataset._ix_to_char[word_index])
+
+    text = [t for t in text if t != '\n']
+    text = ''.join(text)
+    return text
+
+def predict_greedy(config, dataset, model, textOriginal, next_chars=30):
+    model.eval()
+    text = list(textOriginal)
     hiddenState = model.init_state(1)
 
     for i in range(0, next_chars):
@@ -64,21 +65,7 @@ def predict(config, dataset, model, text, next_chars=30):
 
     text = [t for t in text if t != '\n']
     text = ''.join(text)
-    print(text)
     return text
-
-
-# model.eval()
-#             #initChar = dataset._char_to_ix[random.choice(dataset._chars)]
-#             initChar = dataset._char_to_ix['A']
-#             generatedSentence = torch.LongTensor([initChar]).view(-1, 1)
-#             hiddenState = (torch.zeros(config.lstm_num_layers, 1, config.lstm_num_hidden).to(config.device), torch.zeros(config.lstm_num_layers, 1, config.lstm_num_hidden).to(config.device))
-#             for i in range(5):
-#                 predictions, hiddenState = model(generatedSentence, hiddenState)
-#                 print(predictions.shape)
-#                 newChar = predictions[:,0,:].argmax(dim=1)[-1]#.tolist()
-#                 generatedSentence = torch.cat((generatedSentence, newChar))
-#             break
 
 def train(config):
 
@@ -96,6 +83,7 @@ def train(config):
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
     #hiddenState = model.init_state(config.seq_length)
+    startTime = time.time()
     for step, (batch_inputs, batch_targets) in enumerate(data_loader):
         # Only for time measurement of step through network
         t1 = time.time()
@@ -136,8 +124,17 @@ def train(config):
                     ))
 
         if (step + 1) % config.sample_every == 0:
-            #pass
-            predict(config, dataset, model, 'America is', 50)
+            startText = 'America is'
+            if config.greed_sampling:
+                text = predict_with_temperature(config, dataset, model, startText, config.seq_length)
+            else:
+                text = predict_with_temperature(config, dataset, model, startText, config.seq_length)
+            exportFile = '%stextGenerated_%s.txt' % (config.summary_path , time.strftime("%Y-%m-%d-%H-%M", time.localtime(startTime)))
+            text = 'Train Step: %04d/%04d, Accuracy: %.2f, Text: %s\n' % (step, config.train_steps, accuracy, text)
+            with open(exportFile, 'a') as a_writer:
+                if step + 1 == config.sample_every:
+                    a_writer.write('Original text: %s\n' % (startText))
+                a_writer.write(text)
 
         if step == config.train_steps:
             break
@@ -189,6 +186,8 @@ if __name__ == "__main__":
                         help='How often to print training progress')
     parser.add_argument('--sample_every', type=int, default=100,
                         help='How often to sample from the model')
+    parser.add_argument('--greed_sampling', type=int, default=0,
+                        help='If greedy sampling should be applied')
     parser.add_argument('--device', type=str, default=("cpu" if not torch.cuda.is_available() else "cuda"),
                         help="Device to run the model on.")
 
