@@ -240,5 +240,6 @@ if __name__ == "__main__":
     plt.savefig("%s/%s_%s.png" % (config.summary_path,config.model_type, config.dataset), bbox_inches='tight')
     plt.show()
 
-#python train.py --dataset bss --model_type LSTM --input_length 6 --learning_rate 0.0001 --train_steps 1000 --batch_size 256 --num_hidden 256 --device cpu
-#python train.py --dataset bss --model_type GRU --input_length 6 --learning_rate 0.0001 --train_steps 1000 --batch_size 256 --num_hidden 256 --device cpu
+#python train.py --dataset bss --model_type LSTM --train_steps 1000 --learning_rate 0.0001 --batch_size 256 --num_hidden 256 --device cpu --input_length 4
+#python train.py --dataset bss --model_type GRU --train_steps 1000 --learning_rate 0.0001 --batch_size 256 --num_hidden 256 --device cpu --input_length 4
+
