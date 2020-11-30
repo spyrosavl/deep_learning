@@ -32,14 +32,15 @@ from torch.utils.data import DataLoader
 
 from dataset import TextDataset
 from model import TextGenerationModel
+import matplotlib.pyplot as plt
 
 ###############################################################################
 
-def predict_with_temperature(config, dataset, model, textOriginal, next_chars=30, temperature=2):
+def predict_with_temperature(config, dataset, model, textOriginal, next_chars=30):
     model.eval()
     text = list(textOriginal)
     hiddenState = model.init_state(1)
-
+    temperature = config.temperature
     for i in range(0, next_chars):
         x = torch.tensor([[dataset._char_to_ix[c] for c in text[i:]]])
         y_pred, hiddenState = model(x, hiddenState)
@@ -82,8 +83,10 @@ def train(config):
     # Setup the loss and optimizer
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
+    startText = random.choice(dataset._chars)
     #hiddenState = model.init_state(config.seq_length)
     startTime = time.time()
+    loss_list_tmp, accuracy_list_tmp = [], []
     for step, (batch_inputs, batch_targets) in enumerate(data_loader):
         # Only for time measurement of step through network
         t1 = time.time()
@@ -114,7 +117,8 @@ def train(config):
         examples_per_second = config.batch_size/float(t2-t1)
 
         if (step + 1) % config.print_every == 0:
-
+            loss_list_tmp.append(loss.item())
+            accuracy_list_tmp.append(accuracy)
             print("[{}] Train Step {:04d}/{:04d}, Batch Size = {}, \
                     Examples/Sec = {:.2f}, "
                   "Accuracy = {:.2f}, Loss = {:.3f}".format(
@@ -124,11 +128,11 @@ def train(config):
                     ))
 
         if (step + 1) % config.sample_every == 0:
-            startText = 'America is'
-            if config.greed_sampling:
-                text = predict_with_temperature(config, dataset, model, startText, config.seq_length)
+            lenToGenerate = 30
+            if config.greedy_sampling:
+                text = predict_greedy(config, dataset, model, startText, lenToGenerate)
             else:
-                text = predict_with_temperature(config, dataset, model, startText, config.seq_length)
+                text = predict_with_temperature(config, dataset, model, startText, lenToGenerate)
             exportFile = '%stextGenerated_%s.txt' % (config.summary_path , time.strftime("%Y-%m-%d-%H-%M", time.localtime(startTime)))
             text = 'Train Step: %04d/%04d, Accuracy: %.2f, Text: %s\n' % (step, config.train_steps, accuracy, text)
             with open(exportFile, 'a') as a_writer:
@@ -140,7 +144,8 @@ def train(config):
             break
 
     print('Done training.')
-
+    loss_list.append(loss_list_tmp)
+    accuracy_list.append(accuracy_list_tmp)
 
 ###############################################################################
 ###############################################################################
@@ -186,8 +191,10 @@ if __name__ == "__main__":
                         help='How often to print training progress')
     parser.add_argument('--sample_every', type=int, default=100,
                         help='How often to sample from the model')
-    parser.add_argument('--greed_sampling', type=int, default=0,
+    parser.add_argument('--greedy_sampling', type=int, default=0,
                         help='If greedy sampling should be applied')
+    parser.add_argument('--temperature', type=float, default=2.0,
+                        help='Temperature for non greedy sampling.')
     parser.add_argument('--device', type=str, default=("cpu" if not torch.cuda.is_available() else "cuda"),
                         help="Device to run the model on.")
 
@@ -196,7 +203,20 @@ if __name__ == "__main__":
     config = parser.parse_args()
 
     # Train the model
+    loss_list, accuracy_list = [], []
     train(config)
+    loss_list, accuracy_list = np.array(loss_list), np.array(accuracy_list)
+    loss_std, accuracy_std = 3*np.std(loss_list, axis=0), 3*np.std(accuracy_list, axis=0)
+    loss_avg, accuracy_avg = np.average(loss_list, axis=0), np.average(accuracy_list, axis=0)
+    plotRange = config.print_every*np.arange(loss_avg.shape[0])
+    plt.plot(plotRange, loss_avg, label='Loss'), plt.fill_between(plotRange, loss_avg - loss_std, loss_avg + loss_std, alpha=0.5) 
+    plt.plot(plotRange, accuracy_avg, label='Accuracy'), plt.fill_between(plotRange, accuracy_avg - accuracy_std, accuracy_avg + accuracy_std, alpha=0.5) 
+    plt.xlabel('Training Step')
+    plt.grid(),plt.legend()
+    #plt.savefig("%s/%s_%s.png" % (config.summary_path,config.model_type, config.dataset), bbox_inches='tight')
+    plt.show()
 
-#python train.py --txt_file ./assets/book_EN_democracy_in_the_US.txt --train_steps 5000 --device cpu 
-#python train.py --txt_file ./assets/book_EN_democracy_in_the_US.txt --train_steps 5000 --device cuda 
+#python train.py --txt_file ./assets/book_EN_democracy_in_the_US.txt --train_steps 3000 --device cpu 
+#python train.py --txt_file ./assets/book_EN_democracy_in_the_US.txt --train_steps 3000 --device cpu --learning_rate 0.02
+#python train.py --txt_file ./assets/book_EN_democracy_in_the_US.txt --train_steps 3000 --device cpu --lstm_num_hidden 256
+#python train.py --txt_file ./assets/book_EN_democracy_in_the_US.txt --train_steps 3000 --device cpu --lstm_num_layers 3 
