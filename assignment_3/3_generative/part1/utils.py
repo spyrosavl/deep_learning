@@ -31,8 +31,8 @@ def sample_reparameterize(mean, std):
         z - A sample of the distributions, with gradient support for both mean and std. 
             The tensor should have the same shape as the mean and std input tensors.
     """
-    eps = torch.normal(torch.zeros(mean.shape))
-    z = eps.mul(std).add_(mean)
+    eps = torch.randn_like(std)
+    z = mean + std * eps
     return z
 
 
@@ -47,8 +47,9 @@ def KLD(mean, log_std):
         KLD - Tensor with one less dimension than mean and log_std (summed over last dimension).
               The values represent the Kullback-Leibler divergence to unit Gaussians.
     """
-
-    KLD = (((mean**2) + (torch.exp(log_std).pow(2)) - 1 - torch.log((torch.exp(log_std).pow(2)))) / 2).sum(-1)
+    std = torch.exp(log_std)
+    KLD = 0.5 * (mean.pow(2) + std - 1 - log_std)
+    KLD = KLD.sum(axis=-1)
     return KLD
 
 
@@ -85,12 +86,10 @@ def visualize_manifold(decoder, grid_size=20):
     # - torch.meshgrid might be helpful for creating the grid of values
     # - You can use torchvision's function "make_grid" to combine the grid_size**2 images into a grid
     # - Remember to apply a sigmoid after the decoder
-    # percentiles = np.linspace(0.5, 0.9999, 15)
-    # x = norm.ppf(percentiles)
-    # y = norm.ppf(percentiles)
-    # z = torch.normal(size=(grid_size))
-    # x_mean = torch.sigmoid(decoder(z))
-
-    # img_grid = make_grid(x_samples, nrow=4, normalize=True, range=(-1,1))
-
+    percentiles = np.linspace(0.5/(grid_size+1), (grid_size+0.5)/(grid_size+1), grid_size)
+    x = norm.ppf(percentiles)
+    y = norm.ppf(percentiles)
+    z = torch.FloatTensor(np.array(np.meshgrid(x, y)).T).reshape(-1, 2)    
+    output = torch.sigmoid(decoder(z))
+    img_grid = make_grid(output, nrow=grid_size, normalize=True, range=(0,1))
     return img_grid

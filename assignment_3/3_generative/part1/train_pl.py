@@ -17,6 +17,7 @@
 import argparse
 import os
 
+import math
 import numpy as np
 import torch
 import torch.nn as nn
@@ -45,7 +46,6 @@ class VAE(pl.LightningModule):
         """
         super().__init__()
         self.save_hyperparameters()
-        self.z_dim = z_dim
         if model_name == 'MLP':
             self.encoder = MLPEncoder(z_dim=z_dim, hidden_dims=hidden_dims)
             self.decoder = MLPDecoder(z_dim=z_dim, hidden_dims=hidden_dims[::-1])
@@ -64,13 +64,12 @@ class VAE(pl.LightningModule):
             bpd - The average bits per dimension metric of the batch.
                   This is also the loss we train on. Shape: single scalar
         """
-        mean, logvar = self.encoder(imgs)
-        std = torch.exp(0.5 * logvar) #TODO
+        mean, log_std = self.encoder(imgs)
+        std = torch.exp(log_std)
         z = sample_reparameterize(mean, std)
-        prediction = self.decoder(z)
-        L_rec = torch.nn.functional.binary_cross_entropy(imgs, imgs, reduction='sum')
-        #TODO change to predictions
-        L_reg = torch.mean(KLD(mean, logvar))
+        predictions = self.decoder(z)
+        L_rec = torch.nn.functional.binary_cross_entropy_with_logits(predictions, imgs, reduction='sum')
+        L_reg = KLD(mean, log_std).sum()
         elbo = (L_rec + L_reg) / imgs.shape[0]
         bpd = elbo_to_bpd(elbo, imgs.shape)
         return L_rec, L_reg, bpd
@@ -87,7 +86,7 @@ class VAE(pl.LightningModule):
                      between 0 and 1 from which we obtain "x_samples".
                      Shape: [B,C,H,W]
         """
-        z = torch.normal(torch.zeros((batch_size, self.hparams.z_dim)))
+        z = torch.randn((batch_size, self.hparams.z_dim))
         x_mean = torch.sigmoid(self.decoder(z))
         x_samples = torch.bernoulli(x_mean)
         return x_samples, x_mean
@@ -160,7 +159,7 @@ class GenerateCallback(pl.Callback):
         # - Use the torchvision function "save_image" to save an image grid to disk
 
         x_samples, x_mean = pl_module.sample(self.batch_size)
-        grid = make_grid(x_samples, nrow=4, normalize=True, range=(-1,1))
+        grid = make_grid(x_samples, nrow=math.ceil(math.sqrt(self.batch_size)), normalize=True, range=(0,1))
         trainer.logger.experiment.add_image("Reconstructions", grid, global_step=epoch)
 
 
