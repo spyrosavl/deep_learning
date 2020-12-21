@@ -17,7 +17,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
-
+import math
 
 class MLPEncoder(nn.Module):
 
@@ -36,7 +36,15 @@ class MLPEncoder(nn.Module):
         # For an intial architecture, you can use a sequence of linear layers and ReLU activations.
         # Feel free to experiment with the architecture yourself, but the one specified here is 
         # sufficient for the assignment.
-        raise NotImplementedError
+        layers = [nn.Flatten()]
+        lastLayerOutput = input_dim
+        for hidden in hidden_dims:
+            layers.append(nn.Linear(lastLayerOutput, hidden))
+            layers.append(nn.ReLU())
+            lastLayerOutput = hidden
+        self.input = nn.Sequential(*layers)
+        self.outMean = nn.Linear(lastLayerOutput, z_dim)
+        self.outLogSTD = nn.Linear(lastLayerOutput, z_dim)        
 
     def forward(self, x):
         """
@@ -49,9 +57,9 @@ class MLPEncoder(nn.Module):
         """
 
         # Remark: Make sure to understand why we are predicting the log_std and not std
-        mean = None
-        log_std = None
-        raise NotImplementedError
+        x = self.input(x)
+        mean = self.outMean(x)
+        log_std = self.outLogSTD(x)
         return mean, log_std
 
 
@@ -73,7 +81,14 @@ class MLPDecoder(nn.Module):
         # For an intial architecture, you can use a sequence of linear layers and ReLU activations.
         # Feel free to experiment with the architecture yourself, but the one specified here is 
         # sufficient for the assignment.
-        raise NotImplementedError
+        layers = [nn.Flatten()]
+        lastLayerOutput = z_dim
+        for hidden in hidden_dims:
+            layers.append(nn.Linear(lastLayerOutput, hidden))
+            layers.append(nn.ReLU())
+            lastLayerOutput = hidden
+        layers.append(nn.Linear(lastLayerOutput, math.prod(output_shape)))
+        self.input = nn.Sequential(*layers)
 
     def forward(self, z):
         """
@@ -84,9 +99,7 @@ class MLPDecoder(nn.Module):
                 This should be a logit output *without* a sigmoid applied on it.
                 Shape: [B,output_shape[0],output_shape[1],output_shape[2]]
         """
-
-        x = None
-        raise NotImplementedError
+        x = torch.reshape(self.input(z), (-1, self.output_shape[0], self.output_shape[1], self.output_shape[2]))
         return x
 
     @property
