@@ -48,7 +48,7 @@ def KLD(mean, log_std):
               The values represent the Kullback-Leibler divergence to unit Gaussians.
     """
 
-    KLD = (((mean**2) + (torch.exp(log_std)**2) - 1 - torch.log((torch.exp(log_std)**2))) / 2).sum(-1)
+    KLD = (((mean**2) + (torch.exp(log_std).pow(2)) - 1 - torch.log((torch.exp(log_std).pow(2)))) / 2).sum(-1)
     return KLD
 
 
@@ -61,7 +61,7 @@ def elbo_to_bpd(elbo, img_shape):
     Outputs:
         bpd - The negative log likelihood in bits per dimension for the given image.
     """
-    bpd = torch.log2(elbo) / (img_shape[1] * img_shape[2] * img_shape[3])
+    bpd = elbo * np.log2(np.e) / (img_shape[1] * img_shape[2] * img_shape[3])
     return bpd
 
 
