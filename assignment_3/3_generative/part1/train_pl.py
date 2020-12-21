@@ -45,7 +45,7 @@ class VAE(pl.LightningModule):
         """
         super().__init__()
         self.save_hyperparameters()
-
+        self.z_dim = z_dim
         if model_name == 'MLP':
             self.encoder = MLPEncoder(z_dim=z_dim, hidden_dims=hidden_dims)
             self.decoder = MLPDecoder(z_dim=z_dim, hidden_dims=hidden_dims[::-1])
@@ -68,9 +68,10 @@ class VAE(pl.LightningModule):
         std = torch.exp(0.5 * logvar) #TODO
         z = sample_reparameterize(mean, std)
         prediction = self.decoder(z)
-        L_rec = torch.nn.functional.binary_cross_entropy(prediction, imgs, reduction='sum')
-        L_reg = KLD(mean, logvar)
-        elbo = (rc_loss + r_loss) / imgs.shape[0]
+        L_rec = torch.nn.functional.binary_cross_entropy(imgs, imgs, reduction='sum')
+        #TODO change to predictions
+        L_reg = torch.mean(KLD(mean, logvar))
+        elbo = (L_rec + L_reg) / imgs.shape[0]
         bpd = elbo_to_bpd(elbo, imgs.shape)
         return L_rec, L_reg, bpd
 
@@ -86,9 +87,9 @@ class VAE(pl.LightningModule):
                      between 0 and 1 from which we obtain "x_samples".
                      Shape: [B,C,H,W]
         """
-        x_mean = None
-        x_samples = None
-        raise NotImplementedError
+        z = torch.normal(torch.zeros((batch_size, self.hparams.z_dim)))
+        x_mean = torch.sigmoid(self.decoder(z))
+        x_samples = torch.bernoulli(x_mean)
         return x_samples, x_mean
 
     def configure_optimizers(self):
@@ -158,7 +159,10 @@ class GenerateCallback(pl.Callback):
         # - Use the torchvision function "make_grid" to create a grid of multiple images
         # - Use the torchvision function "save_image" to save an image grid to disk
 
-        raise NotImplementedError
+        x_samples, x_mean = pl_module.sample(self.batch_size)
+        grid = make_grid(x_samples, nrow=4, normalize=True, range=(-1,1))
+        trainer.logger.experiment.add_image("Reconstructions", grid, global_step=epoch)
+
 
 
 def train_vae(args):

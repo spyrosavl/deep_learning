@@ -81,7 +81,7 @@ class MLPDecoder(nn.Module):
         # For an intial architecture, you can use a sequence of linear layers and ReLU activations.
         # Feel free to experiment with the architecture yourself, but the one specified here is 
         # sufficient for the assignment.
-        layers = [nn.Flatten()]
+        layers = []
         lastLayerOutput = z_dim
         for hidden in hidden_dims:
             layers.append(nn.Linear(lastLayerOutput, hidden))
@@ -99,7 +99,8 @@ class MLPDecoder(nn.Module):
                 This should be a logit output *without* a sigmoid applied on it.
                 Shape: [B,output_shape[0],output_shape[1],output_shape[2]]
         """
-        x = torch.reshape(self.input(z), (-1, self.output_shape[0], self.output_shape[1], self.output_shape[2]))
+        x = self.input(z)
+        x = torch.reshape(x, (-1, self.output_shape[0], self.output_shape[1], self.output_shape[2]))
         return x
 
     @property
