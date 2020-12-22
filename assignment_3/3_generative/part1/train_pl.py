@@ -163,7 +163,7 @@ class GenerateCallback(pl.Callback):
         trainer.logger.experiment.add_image("VAE Reconstructions", grid, global_step=epoch)
         if not os.path.exists(trainer.logger.log_dir + '/images'):
             os.makedirs(trainer.logger.log_dir + '/images')
-            save_image(x, trainer.logger.log_dir + '/images/{}.png'.format(epoch), nrow=math.ceil(math.sqrt(self.batch_size)))
+            save_image(x_samples, trainer.logger.log_dir + '/images/{}.png'.format(epoch), nrow=math.ceil(math.sqrt(self.batch_size)))
 
 
 
