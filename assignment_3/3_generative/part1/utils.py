@@ -91,5 +91,5 @@ def visualize_manifold(decoder, grid_size=20):
     y = norm.ppf(percentiles)
     z = torch.FloatTensor(np.array(np.meshgrid(x, y)).T).reshape(-1, 2)    
     output = torch.sigmoid(decoder(z))
-    img_grid = make_grid(output, nrow=grid_size, normalize=True, range=(0,1))
+    img_grid = make_grid(output, nrow=grid_size)
     return img_grid

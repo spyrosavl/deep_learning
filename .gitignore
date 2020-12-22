@@ -144,3 +144,5 @@ cython_debug/
 **/.DS_Store
 **/summaries/*
 assignment_3/3_generative/data
+*.png
+*.jpg

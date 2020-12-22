@@ -159,8 +159,13 @@ class GenerateCallback(pl.Callback):
         # - Use the torchvision function "save_image" to save an image grid to disk
 
         x_samples, x_mean = pl_module.sample(self.batch_size)
-        grid = make_grid(x_samples, nrow=math.ceil(math.sqrt(self.batch_size)), normalize=True, range=(0,1))
-        trainer.logger.experiment.add_image("Reconstructions", grid, global_step=epoch)
+        grid = make_grid(x_samples, nrow=math.ceil(math.sqrt(self.batch_size)))
+        trainer.logger.experiment.add_image("VAE Reconstructions", grid, global_step=epoch)
+        if not os.path.exists(trainer.logger.log_dir + '/images'):
+            os.makedirs(trainer.logger.log_dir + '/images')
+            save_image(x, trainer.logger.log_dir + '/images/{}.png'.format(epoch), nrow=math.ceil(math.sqrt(self.batch_size)))
+
+
 
 
 

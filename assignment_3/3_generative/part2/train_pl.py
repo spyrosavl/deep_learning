@@ -22,9 +22,10 @@ import torch.nn.functional as F
 from torchvision.utils import make_grid, save_image
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
-
+import math
 from mnist import mnist
 from models import GeneratorMLP, DiscriminatorMLP
+import numpy as np
 
 
 class GAN(pl.LightningModule):
@@ -63,8 +64,8 @@ class GAN(pl.LightningModule):
         Outputs:
             x - Generated images of shape [B,C,H,W]
         """
-        x = None
-        raise NotImplementedError
+        z = torch.randn((batch_size, self.hparams.z_dim))
+        x = torch.sigmoid(self.generator(z))
         return x
 
     @torch.no_grad()
@@ -81,18 +82,18 @@ class GAN(pl.LightningModule):
         Outputs:
             x - Generated images of shape [B,interpolation_steps+2,C,H,W]
         """
-
-        x = None
-        raise NotImplementedError
+        start = torch.randn((batch_size, self.hparams.z_dim))
+        end = torch.randn((batch_size, self.hparams.z_dim))
+        space = torch.from_numpy(np.linspace(start, end, interpolation_steps+2, axis=1))
+        x = torch.sigmoid(self.generator(space))
         return x
 
     def configure_optimizers(self):
         # Create optimizer for both generator and discriminator.
         # You can use the Adam optimizer for both models.
         # It is recommended to reduce the momentum (beta1) to e.g. 0.5
-        optimizer_gen = None
-        optimizer_disc = None
-        raise NotImplementedError
+        optimizer_gen = torch.optim.Adam(self.generator.parameters(), lr=self.hparams.lr, betas=(0.5, 0.999))
+        optimizer_disc = torch.optim.Adam(self.discriminator.parameters(), lr=self.hparams.lr, betas=(0.5, 0.999))
         return [optimizer_gen, optimizer_disc], []
 
     def training_step(self, batch, batch_idx, optimizer_idx):
@@ -136,11 +137,12 @@ class GAN(pl.LightningModule):
         Outputs:
             loss - The loss for the generator to optimize
         """
-
-        loss = None
+        batch_size = x_real.shape[0]
+        z = torch.randn((batch_size, self.hparams.z_dim))
+        x_fake = self.generator(z)
+        y_fake = torch.sigmoid(self.discriminator(x_fake))
+        loss = -0.5 * torch.mean( torch.log(y_fake), 0)
         self.log("generator/loss", loss)
-        raise NotImplementedError
-
         return loss
 
     def discriminator_step(self, x_real):
@@ -156,19 +158,28 @@ class GAN(pl.LightningModule):
         Outputs:
             loss - The loss for the discriminator to optimize
         """
-
         # Remark: there are more metrics that you can add. 
         # For instance, how about the accuracy of the discriminator?
-        loss = None
-        self.log("generator/loss", loss)
-        raise NotImplementedError
-
+        batch_size = x_real.shape[0]
+        z = torch.randn((batch_size, self.hparams.z_dim))
+        x_fake = self.generator(z)
+        y_fake = torch.sigmoid(self.discriminator(x_fake))
+        y_real = torch.sigmoid(self.discriminator(x_real))
+        #compute loss
+        loss = -0.5 * (torch.mean( torch.log(y_real), 0) + torch.mean( torch.log(1 - y_fake), 0))
+        #compute accuracy
+        y_fake = torch.bernoulli(y_fake)
+        y_real = torch.bernoulli(y_real)
+        correct = torch.sum((y_fake == 0)) + torch.sum((y_real == 1))
+        accuracy = correct / float(2 * batch_size)
+        self.log("discriminator/loss", loss)
+        self.log("discriminator/accuracy", accuracy)
         return loss
 
 
 class GenerateCallback(pl.Callback):
 
-    def __init__(self, batch_size=64, every_n_epochs=10, save_to_disk=False):
+    def __init__(self, batch_size=64, every_n_epochs=5, save_to_disk=False):
         """
         Callback for adding generations of your model to TensorBoard and/or
         save them to disk every N epochs across training.
@@ -208,14 +219,19 @@ class GenerateCallback(pl.Callback):
         # - You can access the tensorboard logger via trainer.logger.experiment
         # - Use torchvision function "make_grid" to create a grid of multiple images
         # - Use torchvision function "save_image" to save an image grid to disk
-
-        raise NotImplementedError
+        x = pl_module.sample(self.batch_size)
+        grid = make_grid(x, nrow=math.ceil(math.sqrt(self.batch_size)))
+        trainer.logger.experiment.add_image("GAN Reconstructions", grid, global_step=epoch)
+        if self.save_to_disk:
+            if not os.path.exists(trainer.logger.log_dir + '/images'):
+                os.makedirs(trainer.logger.log_dir + '/images')
+            save_image(x, trainer.logger.log_dir + '/images/{}.png'.format(epoch), nrow=math.ceil(math.sqrt(self.batch_size)))
 
 
 class InterpolationCallback(pl.Callback):
 
     def __init__(self, batch_size=4, interpolation_steps=5,
-                 every_n_epochs=10, save_to_disk=False):
+                 every_n_epochs=5, save_to_disk=False):
         """
         Callback for adding interpolations between two images to TensorBoard
         and/or save them to disk every N epochs across training.
@@ -261,8 +277,13 @@ class InterpolationCallback(pl.Callback):
 
         # You also have to implement this function in a later question of the assignemnt. 
         # By default it is skipped to allow you to test your other code so far. 
-        print("WARNING: Interpolation function has not been implemented yet.")
-        pass
+        x = pl_module.interpolate(self.batch_size, self.interpolation_steps)
+        grid = make_grid(x, nrow=self.interpolation_steps+2)
+        trainer.logger.experiment.add_image("GAN Interpolations", grid, global_step=epoch)
+        if self.save_to_disk:
+            if not os.path.exists(trainer.logger.log_dir + '/images'):
+                os.makedirs(trainer.logger.log_dir + '/images')
+            save_image(x, trainer.logger.log_dir + '/images/interpolation_{}.png'.format(epoch), nrow=self.interpolation_steps+2)
 
 
 def train_gan(args):
