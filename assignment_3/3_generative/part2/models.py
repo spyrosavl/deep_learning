@@ -17,7 +17,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
-
+import math
 
 class GeneratorMLP(nn.Module):
 
@@ -38,7 +38,17 @@ class GeneratorMLP(nn.Module):
         # You are allowed to experiment with the architecture and change the activation function, normalization, etc.
         # However, the default setup is sufficient to generate fine images and gain full points in the assignment.
         # The default setup is a sequence of Linear, Dropout, LeakyReLU (alpha=0.2)
-        raise NotImplementedError
+        layers = []
+        lastLayerOutput = z_dim
+        for hidden in hidden_dims:
+            layers.append(nn.Linear(lastLayerOutput, hidden))
+            layers.append(nn.Dropout(p=dp_rate))
+            layers.append(nn.LeakyReLU(negative_slope=0.2))
+            lastLayerOutput = hidden
+        layers.append(nn.Linear(lastLayerOutput, math.prod(output_shape)))
+        layers.append(nn.Tanh())
+        self.output_shape = output_shape
+        self.input = nn.Sequential(*layers)
 
     def forward(self, z):
         """
@@ -47,8 +57,8 @@ class GeneratorMLP(nn.Module):
         Outputs:
             x - Generated image of shape [B,output_shape[0],output_shape[1],output_shape[2]]
         """
-        x = None
-        raise NotImplementedError
+        x = self.input(z)
+        x = torch.reshape(x, (-1, self.output_shape[0], self.output_shape[1], self.output_shape[2]))
         return x
 
     @property
@@ -75,7 +85,15 @@ class DiscriminatorMLP(nn.Module):
         # You are allowed to experiment with the architecture and change the activation function, normalization, etc.
         # However, the default setup is sufficient to generate fine images and gain full points in the assignment.
         # The default setup is the same as the generator: a sequence of Linear, Dropout, LeakyReLU (alpha=0.2)
-        raise NotImplementedError
+        layers = [nn.Flatten()]
+        lastLayerOutput = input_dims
+        for hidden in hidden_dims:
+            layers.append(nn.Linear(lastLayerOutput, hidden))
+            layers.append(nn.Dropout(p=dp_rate))
+            layers.append(nn.LeakyReLU(negative_slope=0.2))
+            lastLayerOutput = hidden
+        layers.append(nn.Linear(lastLayerOutput, 1))
+        self.input = nn.Sequential(*layers)
 
     def forward(self, x):
         """
@@ -86,6 +104,5 @@ class DiscriminatorMLP(nn.Module):
                     Note that this should be a logit output *without* a sigmoid applied on it.
                     Shape: [B,1]
         """
-        preds = None
-        raise NotImplementedError
+        preds = self.input(x)
         return preds
