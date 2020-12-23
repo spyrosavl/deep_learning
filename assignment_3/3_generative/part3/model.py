@@ -66,12 +66,13 @@ class NormalizingFlow(nn.Module):
         log_det = self.init_log_det
         if not inverse:
             # TODO: implement forward pass through the flow
-            z, log_det = None, None
-            raise NotImplementedError
+            for layer in self.layers:
+                z, log_det = layer(z, log_det, reverse=False)
         else:
             # TODO: implement inverse pass through the flow
-            z, log_det = None, None
-            raise NotImplementedError
+            # Transform z to x by inverting the flows
+            for layer in reversed(self.layers):
+                z, log_det = layer(z, log_det, reverse=True)
         return z, log_det
 
     @torch.no_grad()
